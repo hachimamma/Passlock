@@ -263,5 +263,5 @@ fn print_usage() {
     println!("  passlock tui");
     println!("  passlock daemon start");
     println!("");
-    println!("For more info: https://github.com/yourusername/passlock");
+    println!("For more info: https://github.com/hachimamma/passlock");
 }
