@@ -32,9 +32,9 @@ impl PassLockDaemon {
         }
 
         self.notify("PassLock daemon started")?;
-        println!("📍 Press Ctrl+Shift+P to capture password");
-        println!("📍 Press Ctrl+Shift+A to auto-fill");
-        println!("📍 Press Ctrl+Shift+L to lock vault");
+        println!("Press Ctrl+Shift+P to capture password");
+        println!("Press Ctrl+Shift+A to auto-fill");
+        println!("Press Ctrl+Shift+L to lock vault");
         
         let self_clone = self.clone_arc();
         tokio::spawn(async move {
