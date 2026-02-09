@@ -1,14 +1,14 @@
 use global_hotkey::{
-    GlobalHotKeyEvent, GlobalHotKeyManager,
     hotkey::{Code, HotKey, Modifiers},
+    GlobalHotKeyEvent, GlobalHotKeyManager,
 };
 use tokio::sync::mpsc;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HotkeyAction {
-    Capture,   // Ctrl+Shift+P - Capture password
-    AutoFill,  // Ctrl+Shift+A - Auto-fill
-    Lock,      // Ctrl+Shift+L - Lock vault
+    Capture,  // Ctrl+Shift+P - Capture password
+    AutoFill, // Ctrl+Shift+A - Auto-fill
+    Lock,     // Ctrl+Shift+L - Lock vault
 }
 
 pub struct HotkeyManager {
@@ -23,22 +23,13 @@ impl HotkeyManager {
         let manager = GlobalHotKeyManager::new()?;
 
         // Ctrl+Shift+P - Capture
-        let capture_hotkey = HotKey::new(
-            Some(Modifiers::CONTROL | Modifiers::SHIFT),
-            Code::KeyP,
-        );
+        let capture_hotkey = HotKey::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyP);
 
         // Ctrl+Shift+A - Auto-fill
-        let autofill_hotkey = HotKey::new(
-            Some(Modifiers::CONTROL | Modifiers::SHIFT),
-            Code::KeyA,
-        );
+        let autofill_hotkey = HotKey::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyA);
 
         // Ctrl+Shift+L - Lock
-        let lock_hotkey = HotKey::new(
-            Some(Modifiers::CONTROL | Modifiers::SHIFT),
-            Code::KeyL,
-        );
+        let lock_hotkey = HotKey::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyL);
 
         manager.register(capture_hotkey)?;
         manager.register(autofill_hotkey)?;
@@ -61,7 +52,10 @@ impl HotkeyManager {
         mpsc::channel(32)
     }
 
-    pub async fn listen(&self, tx: mpsc::Sender<HotkeyAction>) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn listen(
+        &self,
+        tx: mpsc::Sender<HotkeyAction>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let receiver = GlobalHotKeyEvent::receiver();
 
         loop {
@@ -80,7 +74,7 @@ impl HotkeyManager {
                     tx.send(action).await?;
                 }
             }
-            
+
             tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
         }
     }

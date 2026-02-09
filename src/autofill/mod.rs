@@ -18,9 +18,7 @@ fn type_text(text: &str) -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    let result = Command::new("ydotool")
-        .args(&["type", text])
-        .output();
+    let result = Command::new("ydotool").args(&["type", text]).output();
 
     if result.is_ok() && result.as_ref().unwrap().status.success() {
         return Ok(());
@@ -31,16 +29,14 @@ fn type_text(text: &str) -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(target_os = "linux")]
 fn press_tab() -> Result<(), Box<dyn std::error::Error>> {
-    let result = Command::new("xdotool")
-        .args(&["key", "Tab"])
-        .output();
+    let result = Command::new("xdotool").args(&["key", "Tab"]).output();
 
     if result.is_ok() && result.as_ref().unwrap().status.success() {
         return Ok(());
     }
 
     let result = Command::new("ydotool")
-        .args(&["key", "15:1", "15:0"])  
+        .args(&["key", "15:1", "15:0"])
         .output();
 
     if result.is_ok() && result.as_ref().unwrap().status.success() {
@@ -61,10 +57,7 @@ fn type_text(text: &str) -> Result<(), Box<dyn std::error::Error>> {
         text.replace('"', "\\\"")
     );
 
-    Command::new("osascript")
-        .arg("-e")
-        .arg(&script)
-        .output()?;
+    Command::new("osascript").arg("-e").arg(&script).output()?;
 
     Ok(())
 }
@@ -77,10 +70,7 @@ fn press_tab() -> Result<(), Box<dyn std::error::Error>> {
         end tell
     "#;
 
-    Command::new("osascript")
-        .arg("-e")
-        .arg(script)
-        .output()?;
+    Command::new("osascript").arg("-e").arg(script).output()?;
 
     Ok(())
 }

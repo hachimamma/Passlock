@@ -1,10 +1,10 @@
+use crate::crypto;
 use crate::models::{Entry, Vault};
 use crate::storage;
-use crate::crypto;
 use notify_rust::Notification;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use std::time::{Duration, Instant};
+use tokio::sync::Mutex;
 
 pub struct PassLockDaemon {
     vault: Arc<Mutex<Option<Vault>>>,
@@ -25,7 +25,7 @@ impl PassLockDaemon {
 
     pub async fn start(&self) -> Result<(), Box<dyn std::error::Error>> {
         println!("PassLock daemon starting...");
-        
+
         if !storage::vt_exi() {
             self.notify("No vault found. Create one with: passlock create <password>")?;
             return Err("No vault found".into());
@@ -35,7 +35,7 @@ impl PassLockDaemon {
         println!("Press Ctrl+Shift+P to capture password");
         println!("Press Ctrl+Shift+A to auto-fill");
         println!("Press Ctrl+Shift+L to lock vault");
-        
+
         let self_clone = self.clone_arc();
         tokio::spawn(async move {
             self_clone.auto_lock_monitor().await;
@@ -90,11 +90,15 @@ impl PassLockDaemon {
     pub async fn search_entries(&self, query: &str) -> Vec<Entry> {
         if let Some(vault) = self.vault.lock().await.as_ref() {
             let query_lower = query.to_lowercase();
-            vault.e.iter()
+            vault
+                .e
+                .iter()
                 .filter(|e| {
-                    e.n.to_lowercase().contains(&query_lower) ||
-                    e.u.to_lowercase().contains(&query_lower) ||
-                    e.url.as_ref().map_or(false, |u| u.to_lowercase().contains(&query_lower))
+                    e.n.to_lowercase().contains(&query_lower)
+                        || e.u.to_lowercase().contains(&query_lower)
+                        || e.url
+                            .as_ref()
+                            .map_or(false, |u| u.to_lowercase().contains(&query_lower))
                 })
                 .cloned()
                 .collect()
@@ -106,10 +110,10 @@ impl PassLockDaemon {
     async fn auto_lock_monitor(&self) {
         loop {
             tokio::time::sleep(Duration::from_secs(60)).await;
-            
+
             let last = *self.last_activity.lock().await;
             let is_unlocked = self.is_unlocked().await;
-            
+
             if is_unlocked && last.elapsed() >= self.lock_timeout {
                 let _ = self.lock_vault().await;
             }
@@ -125,7 +129,7 @@ impl PassLockDaemon {
                 .timeout(3000)
                 .show()?;
         }
-        
+
         println!("{}", message);
         Ok(())
     }

@@ -40,7 +40,7 @@ impl eframe::App for SelectDialog {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("🔐 Select Password to Auto-Fill");
             ui.add_space(10.0);
-            
+
             ui.separator();
             ui.add_space(5.0);
 
@@ -53,7 +53,10 @@ impl eframe::App for SelectDialog {
                 return;
             }
 
-            ui.label(format!("Found {} matching password(s):", self.entries.len()));
+            ui.label(format!(
+                "Found {} matching password(s):",
+                self.entries.len()
+            ));
             ui.add_space(10.0);
 
             // Scrollable list of entries

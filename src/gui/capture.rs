@@ -1,5 +1,5 @@
-use crate::models::Entry;
 use crate::daemon::window::WindowContext;
+use crate::models::Entry;
 use eframe::egui;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -40,10 +40,23 @@ impl CaptureDialog {
             n: self.name.clone(),
             u: self.username.clone(),
             p: self.password.clone(),
-            url: if self.url.is_empty() { None } else { Some(self.url.clone()) },
-            nt: if self.notes.is_empty() { None } else { Some(self.notes.clone()) },
+            url: if self.url.is_empty() {
+                None
+            } else {
+                Some(self.url.clone())
+            },
+            nt: if self.notes.is_empty() {
+                None
+            } else {
+                Some(self.notes.clone())
+            },
             t: now,
-            tags: self.tags.split(',').map(|s| s.trim().to_lowercase()).filter(|s| !s.is_empty()).collect(),
+            tags: self
+                .tags
+                .split(',')
+                .map(|s| s.trim().to_lowercase())
+                .filter(|s| !s.is_empty())
+                .collect(),
             history: Vec::new(),
             last_modified: now,
         };
@@ -66,10 +79,10 @@ impl eframe::App for CaptureDialog {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("Save Password to PassLock");
             ui.add_space(10.0);
-            
+
             ui.separator();
             ui.add_space(5.0);
-            
+
             ui.horizontal(|ui| {
                 ui.label("Name:");
                 ui.add_space(10.0);

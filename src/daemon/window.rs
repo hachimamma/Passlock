@@ -25,10 +25,7 @@ fn get_active_window_title() -> Result<String, Box<dyn std::error::Error>> {
         }
     }
 
-    if let Ok(output) = Command::new("wmctrl")
-        .args(&["-l"])
-        .output()
-    {
+    if let Ok(output) = Command::new("wmctrl").args(&["-l"]).output() {
         if output.status.success() {
             let lines = String::from_utf8_lossy(&output.stdout);
             if let Some(line) = lines.lines().next() {
@@ -40,10 +37,7 @@ fn get_active_window_title() -> Result<String, Box<dyn std::error::Error>> {
         }
     }
 
-    if let Ok(output) = Command::new("swaymsg")
-        .args(&["-t", "get_tree"])
-        .output()
-    {
+    if let Ok(output) = Command::new("swaymsg").args(&["-t", "get_tree"]).output() {
         if output.status.success() {
             let json = String::from_utf8_lossy(&output.stdout);
             if let Some(start) = json.find("\"focused\":true") {
@@ -70,10 +64,7 @@ fn get_active_window_title() -> Result<String, Box<dyn std::error::Error>> {
         end tell
     "#;
 
-    let output = Command::new("osascript")
-        .arg("-e")
-        .arg(script)
-        .output()?;
+    let output = Command::new("osascript").arg("-e").arg(script).output()?;
 
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
@@ -89,7 +80,7 @@ fn get_active_window_title() -> Result<String, Box<dyn std::error::Error>> {
 
 fn parse_window_title(title: &str) -> WindowContext {
     let title = title.to_string();
-    
+
     let patterns = [
         ("GitHub", "github.com"),
         ("GitLab", "gitlab.com"),

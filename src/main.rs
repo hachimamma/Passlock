@@ -1,13 +1,13 @@
+mod autofill;
 mod crypto;
-mod models;
-mod storage;
-mod vault_ffi;
-mod ui;
 mod daemon;
 mod gui;
-mod autofill;
+mod models;
+mod storage;
+mod ui;
+mod vault_ffi;
 
-pub use models::{get_timestamp, generate_uuid};
+pub use models::{generate_uuid, get_timestamp};
 
 use std::env;
 
@@ -69,11 +69,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn handle_daemon_command(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
-    use crate::daemon::{PassLockDaemon, HotkeyManager};
+    use crate::autofill::type_credentials;
     use crate::daemon::hotkeys::HotkeyAction;
     use crate::daemon::window::get_active_window_context;
+    use crate::daemon::{HotkeyManager, PassLockDaemon};
     use crate::gui::{show_capture_dialog, show_select_dialog};
-    use crate::autofill::type_credentials;
     use std::sync::Arc;
     use tokio::sync::Mutex;
 
@@ -91,28 +91,28 @@ async fn handle_daemon_command(args: &[String]) -> Result<(), Box<dyn std::error
         "start" => {
             println!("Starting PassLock daemon...");
             println!("");
-            
+
             if !storage::vt_exi() {
                 eprintln!("No vault found!");
                 eprintln!("   Create one first: passlock create <password>");
                 std::process::exit(1);
             }
-            
+
             let daemon = Arc::new(Mutex::new(PassLockDaemon::new()));
-            
+
             println!("Enter master password to unlock vault:");
             let password = read_password()?;
-            
+
             {
                 let daemon_guard = daemon.lock().await;
                 daemon_guard.unlock_vault(&password).await?;
             }
-            
+
             {
                 let daemon_guard = daemon.lock().await;
                 daemon_guard.start().await?;
             }
-            
+
             println!("");
             println!("Daemon is running");
             println!("");
@@ -123,24 +123,27 @@ async fn handle_daemon_command(args: &[String]) -> Result<(), Box<dyn std::error
             println!("");
             println!("Press Ctrl+C to stop the daemon");
             println!("");
-            
+
             let hotkey_manager = HotkeyManager::new()?;
             let (tx, mut rx) = HotkeyManager::create_event_channel();
-            
+
             let daemon_clone = Arc::clone(&daemon);
             tokio::spawn(async move {
                 let _ = hotkey_manager.listen(tx).await;
             });
-            
+
             loop {
                 if let Some(action) = rx.recv().await {
                     match action {
                         HotkeyAction::Capture => {
                             println!("Capture triggered!");
-                            
+
                             if let Ok(context) = get_active_window_context() {
-                                println!("   Context: {} ({})", context.suggested_name, context.app_name);
-                                
+                                println!(
+                                    "   Context: {} ({})",
+                                    context.suggested_name, context.app_name
+                                );
+
                                 if let Some(entry) = show_capture_dialog(context) {
                                     let daemon_guard = daemon_clone.lock().await;
                                     match daemon_guard.save_entry(entry).await {
@@ -154,14 +157,18 @@ async fn handle_daemon_command(args: &[String]) -> Result<(), Box<dyn std::error
                         }
                         HotkeyAction::AutoFill => {
                             println!("Auto-fill triggered!");
-                            
+
                             if let Ok(context) = get_active_window_context() {
-                                println!("   Context: {} ({})", context.suggested_name, context.app_name);
-                                
+                                println!(
+                                    "   Context: {} ({})",
+                                    context.suggested_name, context.app_name
+                                );
+
                                 let daemon_guard = daemon_clone.lock().await;
-                                let entries = daemon_guard.search_entries(&context.suggested_name).await;
+                                let entries =
+                                    daemon_guard.search_entries(&context.suggested_name).await;
                                 drop(daemon_guard);
-                                
+
                                 if entries.is_empty() {
                                     println!("No matching passwords found");
                                 } else if entries.len() == 1 {
@@ -171,7 +178,10 @@ async fn handle_daemon_command(args: &[String]) -> Result<(), Box<dyn std::error
                                         Err(e) => eprintln!("Auto-fill failed: {}", e),
                                     }
                                 } else {
-                                    println!("{} matches found, showing selection...", entries.len());
+                                    println!(
+                                        "{} matches found, showing selection...",
+                                        entries.len()
+                                    );
                                     if let Some(selected) = show_select_dialog(entries) {
                                         println!("Auto-filling: {}", selected.n);
                                         match type_credentials(&selected) {
@@ -194,7 +204,7 @@ async fn handle_daemon_command(args: &[String]) -> Result<(), Box<dyn std::error
                         }
                     }
                 }
-                
+
                 tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
             }
         }
@@ -228,13 +238,16 @@ fn read_password() -> Result<String, Box<dyn std::error::Error>> {
     use std::io::{self, Write};
     print!("Password: ");
     io::stdout().flush()?;
-    
+
     let password = rpassword::read_password()?;
     Ok(password)
 }
 
 fn print_usage() {
-    println!("PassLock v{} - Secure Password Manager", env!("CARGO_PKG_VERSION"));
+    println!(
+        "PassLock v{} - Secure Password Manager",
+        env!("CARGO_PKG_VERSION")
+    );
     println!("");
     println!("USAGE:");
     println!("  passlock <COMMAND> [OPTIONS]");

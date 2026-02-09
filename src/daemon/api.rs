@@ -18,16 +18,16 @@ impl DaemonApi {
 
     pub async fn start(&self) -> Result<(), Box<dyn std::error::Error>> {
         println!("🌐 API server starting on port {}", self.port);
-        
+
         // In a real implementation, this would use axum or actix-web
         // For now, this is a placeholder for future expansion
-        
+
         println!("API server ready at http://localhost:{}", self.port);
         Ok(())
     }
 
     // Example API methods that would be exposed:
-    
+
     pub async fn status(&self) -> ApiStatus {
         let daemon = self.daemon.lock().await;
         ApiStatus {
@@ -39,20 +39,20 @@ impl DaemonApi {
 
     pub async fn unlock(&self, password: String) -> Result<(), String> {
         let daemon = self.daemon.lock().await;
-        daemon.unlock_vault(&password).await
+        daemon
+            .unlock_vault(&password)
+            .await
             .map_err(|e| e.to_string())
     }
 
     pub async fn lock(&self) -> Result<(), String> {
         let daemon = self.daemon.lock().await;
-        daemon.lock_vault().await
-            .map_err(|e| e.to_string())
+        daemon.lock_vault().await.map_err(|e| e.to_string())
     }
 
     pub async fn save_entry(&self, entry: Entry) -> Result<(), String> {
         let daemon = self.daemon.lock().await;
-        daemon.save_entry(entry).await
-            .map_err(|e| e.to_string())
+        daemon.save_entry(entry).await.map_err(|e| e.to_string())
     }
 
     pub async fn search(&self, query: String) -> Vec<Entry> {
