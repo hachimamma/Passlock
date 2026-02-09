@@ -2,7 +2,6 @@ use crate::models::Entry;
 use eframe::egui;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use eframe::Event;
 
 pub struct SelectDialog {
     entries: Vec<Entry>,
@@ -34,7 +33,7 @@ impl SelectDialog {
 impl eframe::App for SelectDialog {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         if self.should_close {
-            frame.send_event(Event::CloseRequested);
+            frame.close();
             return;
         }
 
