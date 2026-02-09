@@ -41,3 +41,25 @@ impl Vault {
         }
     }
 }
+
+use rand::Rng;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+pub fn generate_uuid() -> String {
+    let mut rng = rand::thread_rng();
+    format!(
+        "{:08x}-{:04x}-{:04x}-{:04x}-{:012x}",
+        rng.gen::<u32>(),
+        rng.gen::<u16>(),
+        rng.gen::<u16>(),
+        rng.gen::<u16>(),
+        rng.gen::<u64>() & 0xFFFFFFFFFFFF,
+    )
+}
+
+pub fn get_timestamp() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
+}
