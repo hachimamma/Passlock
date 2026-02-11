@@ -232,18 +232,3 @@ mod tests {
         assert_eq!(data, vec![0u8, 0, 0, 0, 0]);
     }
 }
-
-pub fn ct_vt(password: &str) -> Result<(), String> {
-    use crate::storage;
-
-    if storage::vt_exi() {
-        return Err("Vault already exists!".to_string());
-    }
-
-    let empty_vault = crate::models::Vault {
-        e: Vec::new(),
-        s: gen_salt(),
-    };
-
-    storage::svv(&empty_vault, password)
-}

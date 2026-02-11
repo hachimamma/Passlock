@@ -1,4 +1,4 @@
-.PHONY: all build run clean install-deps test serve
+.PHONY: all build run clean install-deps test server
 
 all: build
 
@@ -63,6 +63,6 @@ help:
 	@echo "  make test         - Run all tests (C + Rust)"
 	@echo "  make test-c       - Run only C tests"
 	@echo "  make test-rust    - Run only Rust tests"
-	@echo "  make serve        - Start web server"
+	@echo "  make server        - Start web server"
 	@echo "  make clean        - Clean build artifacts"
 	@echo "  make setup        - Full project setup"
