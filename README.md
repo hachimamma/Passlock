@@ -1,4 +1,4 @@
-# 🔐 PassLock
+# PassLock
 
 **Secure, local-first password manager with a beautiful TUI, adaptive encryption, and zero cloud dependencies.**
 
