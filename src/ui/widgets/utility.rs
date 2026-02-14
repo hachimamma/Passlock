@@ -266,7 +266,7 @@ pub fn draw_theme_selector(f: &mut Frame, area: Rect, app: &App) {
         ])
         .split(area);
 
-    let title = Paragraph::new("🎨 THEME SELECTOR")
+    let title = Paragraph::new("THEME SELECTOR")
         .style(
             Style::default()
                 .fg(app.theme.yellow())
