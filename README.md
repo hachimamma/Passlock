@@ -324,7 +324,7 @@ MIT License - see [LICENSE](LICENSE) file
 - **Homepage:** https://passlock.dev (coming soon)
 - **Documentation:** https://docs.passlock.dev (coming soon)
 - **Issues:** https://github.com/hachimamma/Passlock/issues
-- **Discussions:** https://github.com/hachimamma/Passlock/discussions
+- **Discussions:** https://github.com/hachimamma/Passlock/discussions (coming soon)
 
 ---
 
