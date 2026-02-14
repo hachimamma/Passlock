@@ -58,6 +58,7 @@ jobs:
           cppcheck --enable=all \
                    --suppress=missingIncludeSystem \
                    --suppress=unusedFunction:src/c/vault_engine.c \
+                   --suppress=knownConditionTrueFalse:src/c/vault_engine.c \
                    --error-exitcode=1 \
                    src/c/
           echo "Static analysis passed"

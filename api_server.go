@@ -39,6 +39,26 @@ type Vault struct {
 var v *Vault
 var ms_pwd string
 
+func findPasslockBinary() string {
+	if path, err := exec.LookPath("passlock"); err == nil {
+		return path
+	}
+
+	localPaths := []string{
+		"./target/release/passlock",
+		"./target/debug/passlock",
+		"../target/release/passlock",
+	}
+
+	for _, path := range localPaths {
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
+
+	return "passlock"
+}
+
 func calc_pwdS(password string) map[string]interface{} {
 	score := 0
 	feedback := []string{}
@@ -153,13 +173,14 @@ func handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body := make([]byte, 0)
 	var req map[string]interface{}
 	json.NewDecoder(r.Body).Decode(&req)
 
 	home, _ := os.UserHomeDir()
 	vt_path := filepath.Join(home, ".passlock.vault")
 	tempP := filepath.Join(home, ".passlock.temp")
+
+	passlockBin := findPasslockBinary()
 
 	act, _ := req["act"].(string)
 
@@ -200,20 +221,13 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		wd, err := os.Getwd()
-		if err != nil {
-			json.NewEncoder(w).Encode(map[string]interface{}{"ok": false, "msg": "failed to get working directory"})
-			return
-		}
-
-		cmd := exec.Command("cargo", "run", "--release", "--", "create", pwd)
-		cmd.Dir = wd
-		err = cmd.Run()
+		cmd := exec.Command(passlockBin, "create", pwd)
+		output, err := cmd.CombinedOutput()
 
 		if err != nil {
 			json.NewEncoder(w).Encode(map[string]interface{}{
 				"ok":  false,
-				"msg": "failed to create vault",
+				"msg": fmt.Sprintf("failed to create vault: %s", string(output)),
 			})
 			return
 		}
@@ -232,15 +246,8 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		wd, err := os.Getwd()
-		if err != nil {
-			json.NewEncoder(w).Encode(map[string]interface{}{"ok": false, "msg": "failed to get working directory"})
-			return
-		}
-
-		cmd := exec.Command("cargo", "run", "--release", "--", "unlock", pwd)
-		cmd.Dir = wd
-		err = cmd.Run()
+		cmd := exec.Command(passlockBin, "unlock", pwd)
+		output, err := cmd.CombinedOutput()
 
 		if err != nil {
 			json.NewEncoder(w).Encode(map[string]interface{}{
@@ -264,7 +271,10 @@ func handle(w http.ResponseWriter, r *http.Request) {
 
 		ms_pwd = pwd
 		v = &tempV
-		json.NewEncoder(w).Encode(map[string]interface{}{"ok": true, "msg": "unlocked"})
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":  true,
+			"msg": fmt.Sprintf("unlocked - %s", string(output)),
+		})
 
 	case "list":
 		if v == nil {
@@ -494,14 +504,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		wd, err := os.Getwd()
-		if err != nil {
-			json.NewEncoder(w).Encode(map[string]interface{}{"ok": false, "msg": "failed to get working directory"})
-			return
-		}
-
-		cmd := exec.Command("cargo", "run", "--release", "--", "sync", ms_pwd)
-		cmd.Dir = wd
+		cmd := exec.Command(passlockBin, "sync", ms_pwd)
 		output, err := cmd.CombinedOutput()
 
 		if err != nil {
@@ -517,9 +520,6 @@ func handle(w http.ResponseWriter, r *http.Request) {
 	default:
 		json.NewEncoder(w).Encode(map[string]interface{}{"ok": false, "msg": "unknown action"})
 	}
-
-	_ = body
-
 }
 
 func banner() {
@@ -531,11 +531,15 @@ func banner() {
 
 func main() {
 	banner()
+
+	passlockBin := findPasslockBinary()
+	fmt.Printf("→ Using PassLock binary: %s\n", passlockBin)
+
 	http.Handle("/", http.FileServer(http.Dir("./web")))
 	http.HandleFunc("/api", handle)
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]bool{"ok": true})
 	})
-	log.Println("→ server started")
+	log.Println("→ Server started on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
