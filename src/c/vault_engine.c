@@ -32,6 +32,7 @@ int vault_aes_ni(void) {
 // auto select
 __attribute__((used))
 vault_cipher_t vault_auto_select_cipher(void) {
+    // cppcheck-suppress knownConditionTrueFalse
     if (vault_aes_ni()) {
         return CIPHER_AES256GCM;
     } else {
