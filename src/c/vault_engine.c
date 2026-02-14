@@ -127,6 +127,7 @@ int vault_encrypt_with_cipher(
     vault_cipher_t cipher_type = (vault_cipher_t)cipher;
 
     if (cipher_type == CIPHER_AUTO) {
+        // cppcheck-suppress knownConditionTrueFalse
         cipher_type = vault_auto_select_cipher();
     }
 
