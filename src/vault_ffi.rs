@@ -6,29 +6,34 @@ const VAULT_SUCCESS: c_int = 0;
 const VAULT_ERROR_AUTH: c_int = -4;
 pub const SALT_LENGTH: usize = 16;
 
+// Cipher type consts
+pub const _CIPHER_AUTO: c_int = 0;
+pub const _CIPHER_AES256GCM: c_int = 1;
+pub const _CIPHER_CHACHA20POLY1305: c_int = 2;
+
 #[link(name = "vault_engine", kind = "static")]
-extern "C" {
+unsafe extern "C" {
     fn vault_init() -> c_int;
     fn vault_cleanup();
 
     fn vault_encrypt(
-        plaintext: *const c_uchar,
-        plaintext_len: usize,
-        password: *const c_char,
-        password_len: usize,
+        pltext: *const c_uchar,
+        pltext_len: usize,
+        pwd: *const c_char,
+        pwd_len: usize,
         salt: *const c_uchar,
-        ciphertext_out: *mut *mut c_uchar,
-        ciphertext_len_out: *mut usize,
+        citext_out: *mut *mut c_uchar,
+        citext_len_out: *mut usize,
     ) -> c_int;
 
     fn vault_decrypt(
-        ciphertext: *const c_uchar,
-        ciphertext_len: usize,
-        password: *const c_char,
-        password_len: usize,
+        citext: *const c_uchar,
+        citext_len: usize,
+        pwd: *const c_char,
+        pwd_len: usize,
         salt: *const c_uchar,
-        plaintext_out: *mut *mut c_uchar,
-        plaintext_len_out: *mut usize,
+        pltext_out: *mut *mut c_uchar,
+        pltext_len_out: *mut usize,
     ) -> c_int;
 
     fn vault_gen_salt(salt: *mut c_uchar, salt_len: usize) -> c_int;
@@ -36,6 +41,20 @@ extern "C" {
     fn vault_free_buffer(buf: *mut c_uchar);
 
     fn vault_secure_zero(ptr: *mut c_uchar, len: usize);
+
+    fn vault_aes_ni() -> c_int;
+
+    #[allow(dead_code)]
+    fn vault_cipher(
+        pltext: *const c_uchar,
+        pltext_len: usize,
+        pwd: *const c_char,
+        pwd_len: usize,
+        salt: *const c_uchar,
+        citext_out: *mut *mut c_uchar,
+        citext_len_out: *mut usize,
+        ci_type: c_int,
+    ) -> c_int;
 }
 
 pub fn init() -> Result<(), String> {
@@ -65,7 +84,28 @@ pub fn generate_salt() -> Result<Vec<u8>, String> {
     }
 }
 
-pub fn encrypt_data(plaintext: &[u8], password: &str, salt: &[u8]) -> Result<Vec<u8>, String> {
+pub fn aes_sup() -> bool {
+    unsafe { vault_aes_ni() != 0 }
+}
+
+pub fn get_cipher() -> &'static str {
+    if aes_sup() {
+        "AES-256-GCM (hardware accelerated)"
+    } else {
+        "ChaCha20-Poly1305 (optimized for your CPU)"
+    }
+}
+
+#[allow(dead_code)]
+pub fn get_name(ci_type: c_int) -> &'static str {
+    match ci_type {
+        _CIPHER_AES256GCM => "AES-256-GCM",
+        _CIPHER_CHACHA20POLY1305 => "ChaCha20-Poly1305",
+        _ => "Auto",
+    }
+}
+
+pub fn encrypt_data(pltext: &[u8], pwd: &str, salt: &[u8]) -> Result<Vec<u8>, String> {
     if salt.len() != SALT_LENGTH {
         return Err(format!(
             "Invalid salt length: expected {}, got {}",
@@ -74,36 +114,42 @@ pub fn encrypt_data(plaintext: &[u8], password: &str, salt: &[u8]) -> Result<Vec
         ));
     }
 
-    let password_cstr = CString::new(password).map_err(|_| "Invalid password string")?;
+    let pwd_cstr = CString::new(pwd).map_err(|_| "Invalid pwd string")?;
 
-    let mut ciphertext_ptr: *mut c_uchar = ptr::null_mut();
-    let mut ciphertext_len: usize = 0;
+    let mut citext_ptr: *mut c_uchar = ptr::null_mut();
+    let mut citext_len: usize = 0;
 
     unsafe {
         let result = vault_encrypt(
-            plaintext.as_ptr(),
-            plaintext.len(),
-            password_cstr.as_ptr(),
-            password.len(),
+            pltext.as_ptr(),
+            pltext.len(),
+            pwd_cstr.as_ptr(),
+            pwd.len(),
             salt.as_ptr(),
-            &raw mut ciphertext_ptr,
-            &raw mut ciphertext_len,
+            &raw mut citext_ptr,
+            &raw mut citext_len,
         );
 
         if result == VAULT_SUCCESS {
-            let ciphertext = std::slice::from_raw_parts(ciphertext_ptr, ciphertext_len).to_vec();
-            vault_free_buffer(ciphertext_ptr);
-            Ok(ciphertext)
+            let citext = std::slice::from_raw_parts(citext_ptr, citext_len).to_vec();
+            vault_free_buffer(citext_ptr);
+            Ok(citext)
         } else {
-            if !ciphertext_ptr.is_null() {
-                vault_free_buffer(ciphertext_ptr);
+            if !citext_ptr.is_null() {
+                vault_free_buffer(citext_ptr);
             }
             Err("Encryption failed".to_string())
         }
     }
 }
 
-pub fn decrypt_data(ciphertext: &[u8], password: &str, salt: &[u8]) -> Result<Vec<u8>, String> {
+#[allow(dead_code)]
+pub fn encrypt_data_with_cipher(
+    pltext: &[u8],
+    pwd: &str,
+    salt: &[u8],
+    ci_type: c_int,
+) -> Result<Vec<u8>, String> {
     if salt.len() != SALT_LENGTH {
         return Err(format!(
             "Invalid salt length: expected {}, got {}",
@@ -112,32 +158,71 @@ pub fn decrypt_data(ciphertext: &[u8], password: &str, salt: &[u8]) -> Result<Ve
         ));
     }
 
-    let password_cstr = CString::new(password).map_err(|_| "Invalid password string")?;
+    let pwd_cstr = CString::new(pwd).map_err(|_| "Invalid pwd string")?;
 
-    let mut plaintext_ptr: *mut c_uchar = ptr::null_mut();
-    let mut plaintext_len: usize = 0;
+    let mut citext_ptr: *mut c_uchar = ptr::null_mut();
+    let mut citext_len: usize = 0;
 
     unsafe {
-        let result = vault_decrypt(
-            ciphertext.as_ptr(),
-            ciphertext.len(),
-            password_cstr.as_ptr(),
-            password.len(),
+        let result = vault_cipher(
+            pltext.as_ptr(),
+            pltext.len(),
+            pwd_cstr.as_ptr(),
+            pwd.len(),
             salt.as_ptr(),
-            &raw mut plaintext_ptr,
-            &raw mut plaintext_len,
+            &raw mut citext_ptr,
+            &raw mut citext_len,
+            ci_type,
         );
 
         if result == VAULT_SUCCESS {
-            let plaintext = std::slice::from_raw_parts(plaintext_ptr, plaintext_len).to_vec();
+            let citext = std::slice::from_raw_parts(citext_ptr, citext_len).to_vec();
+            vault_free_buffer(citext_ptr);
+            Ok(citext)
+        } else {
+            if !citext_ptr.is_null() {
+                vault_free_buffer(citext_ptr);
+            }
+            Err("Encryption failed".to_string())
+        }
+    }
+}
+
+pub fn decrypt_data(citext: &[u8], pwd: &str, salt: &[u8]) -> Result<Vec<u8>, String> {
+    if salt.len() != SALT_LENGTH {
+        return Err(format!(
+            "Invalid salt length: expected {}, got {}",
+            SALT_LENGTH,
+            salt.len()
+        ));
+    }
+
+    let pwd_cstr = CString::new(pwd).map_err(|_| "Invalid pwd string")?;
+
+    let mut plaintext_ptr: *mut c_uchar = ptr::null_mut();
+    let mut pltext_len: usize = 0;
+
+    unsafe {
+        let result = vault_decrypt(
+            citext.as_ptr(),
+            citext.len(),
+            pwd_cstr.as_ptr(),
+            pwd.len(),
+            salt.as_ptr(),
+            &raw mut plaintext_ptr,
+            &raw mut pltext_len,
+        );
+
+        if result == VAULT_SUCCESS {
+            let pltext = std::slice::from_raw_parts(plaintext_ptr, pltext_len).to_vec();
             vault_free_buffer(plaintext_ptr);
-            Ok(plaintext)
+            Ok(pltext)
         } else {
             if !plaintext_ptr.is_null() {
                 vault_free_buffer(plaintext_ptr);
             }
             if result == VAULT_ERROR_AUTH {
-                Err("Wrong password".to_string())
+                Err("Wrong pwd".to_string())
             } else {
                 Err("Decryption failed".to_string())
             }
