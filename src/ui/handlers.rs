@@ -131,6 +131,15 @@ pub fn handle_mmi(app: &mut App, key: KeyCode) -> bool {
             }
         }
         KeyCode::Char('7') | KeyCode::Esc => return true,
+        KeyCode::Char('8' | 't' | 'T') => {
+            use super::colors::Theme;
+            app.screen = Screen::ThemeSelector;
+            app.theme_selector_index = Theme::all()
+                .iter()
+                .position(|t| t == &app.theme)
+                .unwrap_or(0);
+            app.msg.clear();
+        }
         KeyCode::Enter => {
             app.msg.clear();
             match app.selected_menu {
@@ -212,7 +221,7 @@ pub fn handle_vpi(app: &mut App, key: KeyCode) {
             app.set_msg("Filters cleared", MessageType::Success);
         }
         KeyCode::Esc => {
-            app.should_quit = true;
+            app.screen = Screen::MainMenu;
             app.selected_entry = 0;
         }
         _ => {}
@@ -275,7 +284,7 @@ pub fn handle_api(app: &mut App, key: KeyCode) {
             }
         }
         KeyCode::Esc => {
-            app.should_quit = true;
+            app.screen = Screen::MainMenu;
             app.ca_form();
         }
         _ => {}
@@ -338,7 +347,7 @@ pub fn handle_epi(app: &mut App, key: KeyCode) {
             }
         }
         KeyCode::Esc => {
-            app.should_quit = true;
+            app.screen = Screen::MainMenu;
             app.ca_form();
         }
         _ => {}
@@ -365,7 +374,7 @@ pub fn handle_si(app: &mut App, key: KeyCode) {
             app.screen = Screen::ViewPasswords;
         }
         KeyCode::Esc => {
-            app.should_quit = true;
+            app.screen = Screen::MainMenu;
         }
         _ => {}
     }
@@ -383,7 +392,7 @@ pub fn handle_gi(app: &mut App, key: KeyCode) {
             app.gen_pwd();
         }
         KeyCode::Esc => {
-            app.should_quit = true;
+            app.screen = Screen::MainMenu;
         }
         _ => {}
     }
@@ -416,7 +425,7 @@ pub fn handle_di(app: &mut App, key: KeyCode) {
             }
         }
         KeyCode::Esc => {
-            app.should_quit = true;
+            app.screen = Screen::MainMenu;
         }
         _ => {}
     }
@@ -451,8 +460,52 @@ pub fn handle_tfi(app: &mut App, key: KeyCode) {
             }
         }
         KeyCode::Esc => {
-            // flagged
-            app.should_quit = true;
+            app.screen = Screen::MainMenu;
+        }
+        _ => {}
+    }
+}
+
+pub fn handle_theme_selector(app: &mut App, key: KeyCode) {
+    use super::colors::Theme;
+
+    match key {
+        KeyCode::Up | KeyCode::Char('k') => {
+            if app.theme_selector_index > 0 {
+                app.theme_selector_index -= 1;
+            }
+        }
+        KeyCode::Down | KeyCode::Char('j') => {
+            let themes = Theme::all();
+            if app.theme_selector_index < themes.len() - 1 {
+                app.theme_selector_index += 1;
+            }
+        }
+        KeyCode::Left => {
+            app.theme = app.theme.previous();
+            app.theme_selector_index = Theme::all()
+                .iter()
+                .position(|t| t == &app.theme)
+                .unwrap_or(0);
+        }
+        KeyCode::Right => {
+            app.theme = app.theme.next();
+            app.theme_selector_index = Theme::all()
+                .iter()
+                .position(|t| t == &app.theme)
+                .unwrap_or(0);
+        }
+        KeyCode::Enter => {
+            let themes = Theme::all();
+            app.theme = themes[app.theme_selector_index];
+            app.screen = Screen::MainMenu;
+            app.set_msg(
+                &format!("Theme changed to: {}", app.theme.name()),
+                MessageType::Success,
+            );
+        }
+        KeyCode::Esc => {
+            app.screen = Screen::MainMenu;
         }
         _ => {}
     }

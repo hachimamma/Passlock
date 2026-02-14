@@ -15,12 +15,13 @@ use std::io;
 use app::App;
 use handlers::{
     handle_api, handle_cvi, handle_di, handle_epi, handle_gi, handle_mmi, handle_si, handle_tfi,
-    handle_uvi, handle_vhi, handle_vpi,
+    handle_theme_selector, handle_uvi, handle_vhi, handle_vpi,
 };
 use screens::Screen;
 use widgets::{
     draw_add_pwd, draw_create_vault, draw_del_pwd, draw_edit_pwd, draw_filter_tags, draw_gen_pwd,
-    draw_history, draw_loading, draw_main_menu, draw_search_pwd, draw_unlock_vault, draw_view_pwds,
+    draw_history, draw_loading, draw_main_menu, draw_search_pwd, draw_theme_selector,
+    draw_unlock_vault, draw_view_pwds,
 };
 
 pub fn run_tui() -> Result<(), Box<dyn std::error::Error>> {
@@ -87,6 +88,7 @@ fn run_app<B: ratatui::backend::Backend>(
                     Screen::GeneratePassword => handle_gi(app, key.code),
                     Screen::DeletePassword => handle_di(app, key.code),
                     Screen::FilterByTag => handle_tfi(app, key.code),
+                    Screen::ThemeSelector => handle_theme_selector(app, key.code),
                 }
             }
         }
@@ -96,7 +98,7 @@ fn run_app<B: ratatui::backend::Backend>(
 fn ui(f: &mut Frame, app: &App) {
     let size = f.size();
     match app.screen {
-        Screen::VaultCheck => draw_loading(f, size),
+        Screen::VaultCheck => draw_loading(f, size, app),
         Screen::CreateVault => draw_create_vault(f, size, app),
         Screen::UnlockVault => draw_unlock_vault(f, size, app),
         Screen::MainMenu => draw_main_menu(f, size, app),
@@ -108,5 +110,6 @@ fn ui(f: &mut Frame, app: &App) {
         Screen::GeneratePassword => draw_gen_pwd(f, size, app),
         Screen::DeletePassword => draw_del_pwd(f, size, app),
         Screen::FilterByTag => draw_filter_tags(f, size, app),
+        Screen::ThemeSelector => draw_theme_selector(f, size, app),
     }
 }

@@ -1,5 +1,5 @@
 use super::super::app::App;
-use super::super::colors::GruvboxColors;
+use super::super::colors::ThemeColors;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
@@ -40,24 +40,24 @@ pub fn draw_search_pwd(f: &mut Frame, size: Rect, app: &App) {
         .split(size);
     let block = Block::default()
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(GruvboxColors::blue()))
+        .border_style(Style::default().fg(app.theme.blue()))
         .title("═══ SEARCH PASSWORDS ═══")
         .title_alignment(Alignment::Center)
-        .style(Style::default().bg(GruvboxColors::bg0()));
+        .style(Style::default().bg(app.theme.bg0()));
     f.render_widget(block, size);
     let title = Paragraph::new("Search by name, username, URL, or tags")
-        .style(Style::default().fg(GruvboxColors::yellow()))
+        .style(Style::default().fg(app.theme.yellow()))
         .alignment(Alignment::Center);
     f.render_widget(title, chunks[0]);
     let search = Paragraph::new(format!("Search: {}", app.search_query)).style(
         Style::default()
-            .fg(GruvboxColors::green())
+            .fg(app.theme.green())
             .add_modifier(Modifier::BOLD),
     );
     f.render_widget(search, chunks[1]);
     if app.entry_disp.is_empty() && !app.search_query.is_empty() {
         let empty = Paragraph::new("[ No matches found ]")
-            .style(Style::default().fg(GruvboxColors::gray()))
+            .style(Style::default().fg(app.theme.gray()))
             .alignment(Alignment::Center);
         f.render_widget(empty, chunks[2]);
     } else if !app.entry_disp.is_empty() {
@@ -67,29 +67,29 @@ pub fn draw_search_pwd(f: &mut Frame, size: Rect, app: &App) {
             .map(|entry| {
                 let mut lines = vec![
                     Line::from(vec![
-                        Span::styled("• ", Style::default().fg(GruvboxColors::orange())),
+                        Span::styled("• ", Style::default().fg(app.theme.orange())),
                         Span::styled(
                             &entry.n,
                             Style::default()
-                                .fg(GruvboxColors::yellow())
+                                .fg(app.theme.yellow())
                                 .add_modifier(Modifier::BOLD),
                         ),
                     ]),
                     Line::from(vec![
-                        Span::styled("  User: ", Style::default().fg(GruvboxColors::gray())),
-                        Span::styled(&entry.u, Style::default().fg(GruvboxColors::blue())),
+                        Span::styled("  User: ", Style::default().fg(app.theme.gray())),
+                        Span::styled(&entry.u, Style::default().fg(app.theme.blue())),
                     ]),
                     Line::from(vec![
-                        Span::styled("  Pass: ", Style::default().fg(GruvboxColors::gray())),
-                        Span::styled(&entry.p, Style::default().fg(GruvboxColors::green())),
+                        Span::styled("  Pass: ", Style::default().fg(app.theme.gray())),
+                        Span::styled(&entry.p, Style::default().fg(app.theme.green())),
                     ]),
                 ];
                 if !entry.tags.is_empty() {
                     lines.push(Line::from(vec![
-                        Span::styled("  Tags: ", Style::default().fg(GruvboxColors::gray())),
+                        Span::styled("  Tags: ", Style::default().fg(app.theme.gray())),
                         Span::styled(
                             entry.tags.join(", "),
-                            Style::default().fg(GruvboxColors::orange()),
+                            Style::default().fg(app.theme.orange()),
                         ),
                     ]));
                 }
@@ -101,7 +101,7 @@ pub fn draw_search_pwd(f: &mut Frame, size: Rect, app: &App) {
         f.render_widget(list, chunks[2]);
     }
     let help = Paragraph::new("Type to search │ Enter: View results │ Esc: Back")
-        .style(Style::default().fg(GruvboxColors::gray()))
+        .style(Style::default().fg(app.theme.gray()))
         .alignment(Alignment::Center);
     f.render_widget(help, chunks[3]);
 }
@@ -121,13 +121,13 @@ pub fn draw_gen_pwd(f: &mut Frame, size: Rect, app: &App) {
         .split(area);
     let block = Block::default()
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(GruvboxColors::aqua()))
+        .border_style(Style::default().fg(app.theme.aqua()))
         .title("═══ GENERATE PASSWORD ═══")
         .title_alignment(Alignment::Center)
-        .style(Style::default().bg(GruvboxColors::bg0()));
+        .style(Style::default().bg(app.theme.bg0()));
     f.render_widget(block, area);
     let title = Paragraph::new("Enter password length (4-64)")
-        .style(Style::default().fg(GruvboxColors::yellow()))
+        .style(Style::default().fg(app.theme.yellow()))
         .alignment(Alignment::Center);
     f.render_widget(title, chunks[0]);
     let length_input = Paragraph::new(format!(
@@ -140,7 +140,7 @@ pub fn draw_gen_pwd(f: &mut Frame, size: Rect, app: &App) {
     ))
     .style(
         Style::default()
-            .fg(GruvboxColors::green())
+            .fg(app.theme.green())
             .add_modifier(Modifier::BOLD),
     );
     f.render_widget(length_input, chunks[1]);
@@ -149,13 +149,13 @@ pub fn draw_gen_pwd(f: &mut Frame, size: Rect, app: &App) {
             Line::from(""),
             Line::from(Span::styled(
                 "Generated Password:",
-                Style::default().fg(GruvboxColors::gray()),
+                Style::default().fg(app.theme.gray()),
             )),
             Line::from(""),
             Line::from(Span::styled(
                 &app.gen_pwd,
                 Style::default()
-                    .fg(GruvboxColors::green())
+                    .fg(app.theme.green())
                     .add_modifier(Modifier::BOLD),
             )),
         ])
@@ -163,7 +163,7 @@ pub fn draw_gen_pwd(f: &mut Frame, size: Rect, app: &App) {
         f.render_widget(generated, chunks[2]);
     }
     let help = Paragraph::new("Enter: Generate │ Esc: Back")
-        .style(Style::default().fg(GruvboxColors::gray()))
+        .style(Style::default().fg(app.theme.gray()))
         .alignment(Alignment::Center);
     f.render_widget(help, chunks[4]);
 }
@@ -181,10 +181,10 @@ pub fn draw_filter_tags(f: &mut Frame, size: Rect, app: &App) {
         .split(size);
     let block = Block::default()
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(GruvboxColors::purple()))
+        .border_style(Style::default().fg(app.theme.purple()))
         .title("═══ FILTER BY TAG ═══")
         .title_alignment(Alignment::Center)
-        .style(Style::default().bg(GruvboxColors::bg0()));
+        .style(Style::default().bg(app.theme.bg0()));
     f.render_widget(block, size);
     let title = if let Some(ref tag) = app.active_tf {
         format!("Filtering by: [{}] ({} entries)", tag, app.entry_disp.len())
@@ -192,19 +192,19 @@ pub fn draw_filter_tags(f: &mut Frame, size: Rect, app: &App) {
         "Select a tag to filter".to_string()
     };
     let title_widget = Paragraph::new(title)
-        .style(Style::default().fg(GruvboxColors::yellow()))
+        .style(Style::default().fg(app.theme.yellow()))
         .alignment(Alignment::Center);
     f.render_widget(title_widget, chunks[0]);
     if app.all_tags.is_empty() {
         let empty = Paragraph::new("[ No tags available - Add tags to your passwords first ]")
-            .style(Style::default().fg(GruvboxColors::gray()))
+            .style(Style::default().fg(app.theme.gray()))
             .alignment(Alignment::Center);
         f.render_widget(empty, chunks[1]);
     } else {
         let mut items = vec![ListItem::new(Line::from(vec![
             Span::styled(
                 if app.select_tf == 0 { "▶ " } else { "  " },
-                Style::default().fg(GruvboxColors::yellow()),
+                Style::default().fg(app.theme.yellow()),
             ),
             Span::styled(
                 format!(
@@ -213,10 +213,10 @@ pub fn draw_filter_tags(f: &mut Frame, size: Rect, app: &App) {
                 ),
                 if app.select_tf == 0 {
                     Style::default()
-                        .fg(GruvboxColors::green())
+                        .fg(app.theme.green())
                         .add_modifier(Modifier::BOLD)
                 } else {
-                    Style::default().fg(GruvboxColors::fg())
+                    Style::default().fg(app.theme.fg())
                 },
             ),
         ]))];
@@ -224,15 +224,15 @@ pub fn draw_filter_tags(f: &mut Frame, size: Rect, app: &App) {
             let is_selected = idx + 1 == app.select_tf;
             let prefix = if is_selected { "▶ " } else { "  " };
             items.push(ListItem::new(Line::from(vec![
-                Span::styled(prefix, Style::default().fg(GruvboxColors::yellow())),
+                Span::styled(prefix, Style::default().fg(app.theme.yellow())),
                 Span::styled(
                     format!("[{tag}] ({count} entries)"),
                     if is_selected {
                         Style::default()
-                            .fg(GruvboxColors::orange())
+                            .fg(app.theme.orange())
                             .add_modifier(Modifier::BOLD)
                     } else {
-                        Style::default().fg(GruvboxColors::fg())
+                        Style::default().fg(app.theme.fg())
                     },
                 ),
             ])));
@@ -242,12 +242,163 @@ pub fn draw_filter_tags(f: &mut Frame, size: Rect, app: &App) {
     }
     if app.active_tf.is_some() {
         let filter_info = Paragraph::new("Press V to view filtered passwords")
-            .style(Style::default().fg(GruvboxColors::aqua()))
+            .style(Style::default().fg(app.theme.aqua()))
             .alignment(Alignment::Center);
         f.render_widget(filter_info, chunks[2]);
     }
     let help = Paragraph::new("↑/↓: Navigate │ Enter: Apply │ V: View │ Esc: Back")
-        .style(Style::default().fg(GruvboxColors::gray()))
+        .style(Style::default().fg(app.theme.gray()))
         .alignment(Alignment::Center);
     f.render_widget(help, chunks[3]);
+}
+
+#[allow(clippy::too_many_lines)]
+pub fn draw_theme_selector(f: &mut Frame, area: Rect, app: &App) {
+    use super::super::colors::{Theme, ThemeColors};
+
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .margin(2)
+        .constraints([
+            Constraint::Length(3),
+            Constraint::Min(10),
+            Constraint::Length(3),
+        ])
+        .split(area);
+
+    let title = Paragraph::new("🎨 THEME SELECTOR")
+        .style(
+            Style::default()
+                .fg(app.theme.yellow())
+                .add_modifier(Modifier::BOLD),
+        )
+        .alignment(Alignment::Center)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(app.theme.aqua())),
+        );
+    f.render_widget(title, chunks[0]);
+
+    let content_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(40), Constraint::Percentage(60)])
+        .split(chunks[1]);
+
+    let themes = Theme::all();
+    let items: Vec<ListItem> = themes
+        .iter()
+        .enumerate()
+        .map(|(i, theme)| {
+            let is_selected = i == app.theme_selector_index;
+            let is_current = theme == &app.theme;
+
+            let content = if is_current {
+                format!(
+                    "{}● {}",
+                    if is_selected { "> " } else { "  " },
+                    theme.name()
+                )
+            } else {
+                format!(
+                    "{}  {}",
+                    if is_selected { "> " } else { "  " },
+                    theme.name()
+                )
+            };
+
+            let style = if is_selected {
+                Style::default()
+                    .fg(theme.yellow())
+                    .add_modifier(Modifier::BOLD)
+            } else if is_current {
+                Style::default().fg(theme.green())
+            } else {
+                Style::default().fg(app.theme.fg())
+            };
+
+            ListItem::new(content).style(style)
+        })
+        .collect();
+
+    let list = List::new(items).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(app.theme.blue()))
+            .title(" Themes "),
+    );
+    f.render_widget(list, content_chunks[0]);
+
+    let preview_theme = themes[app.theme_selector_index];
+    let preview_lines = vec![
+        Line::from(vec![
+            Span::styled("Theme: ", Style::default().fg(app.theme.gray())),
+            Span::styled(
+                preview_theme.name(),
+                Style::default()
+                    .fg(preview_theme.yellow())
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ]),
+        Line::from(""),
+        Line::from(vec![Span::styled(
+            "Colors:",
+            Style::default().fg(app.theme.gray()),
+        )]),
+        Line::from(vec![
+            Span::raw("  Red:    "),
+            Span::styled("███", Style::default().fg(preview_theme.red())),
+        ]),
+        Line::from(vec![
+            Span::raw("  Green:  "),
+            Span::styled("███", Style::default().fg(preview_theme.green())),
+        ]),
+        Line::from(vec![
+            Span::raw("  Yellow: "),
+            Span::styled("███", Style::default().fg(preview_theme.yellow())),
+        ]),
+        Line::from(vec![
+            Span::raw("  Blue:   "),
+            Span::styled("███", Style::default().fg(preview_theme.blue())),
+        ]),
+        Line::from(vec![
+            Span::raw("  Purple: "),
+            Span::styled("███", Style::default().fg(preview_theme.purple())),
+        ]),
+        Line::from(vec![
+            Span::raw("  Aqua:   "),
+            Span::styled("███", Style::default().fg(preview_theme.aqua())),
+        ]),
+    ];
+
+    let preview = Paragraph::new(preview_lines)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(app.theme.purple()))
+                .title(" Preview "),
+        )
+        .alignment(Alignment::Left);
+    f.render_widget(preview, content_chunks[1]);
+
+    let help_text = vec![
+        Span::styled("↑↓", Style::default().fg(app.theme.yellow())),
+        Span::raw(": Navigate  "),
+        Span::styled("←→", Style::default().fg(app.theme.yellow())),
+        Span::raw(": Quick Switch  "),
+        Span::styled("Enter", Style::default().fg(app.theme.green())),
+        Span::raw(": Apply  "),
+        Span::styled("Esc", Style::default().fg(app.theme.red())),
+        Span::raw(": Cancel"),
+    ];
+
+    let help = Paragraph::new(Line::from(help_text))
+        .style(Style::default().fg(app.theme.gray()))
+        .alignment(Alignment::Center)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(app.theme.gray())),
+        );
+    f.render_widget(help, chunks[2]);
 }

@@ -12,6 +12,7 @@ pub enum Screen {
     GeneratePassword,
     DeletePassword,
     FilterByTag,
+    ThemeSelector,
 }
 
 #[derive(Clone, PartialEq)]
