@@ -32,12 +32,17 @@ int vault_aes_ni(void) {
 // auto select
 __attribute__((used))
 vault_cipher_t vault_auto_select_cipher(void) {
-    // cppcheck-suppress knownConditionTrueFalse
+#ifdef __AES__
+    // If compiled with AES support, do runtime check
     if (vault_aes_ni()) {
         return CIPHER_AES256GCM;
-    } else {
-        return CIPHER_CHACHA20POLY1305;
     }
+    return CIPHER_CHACHA20POLY1305;
+#else
+    // If not compiled with AES support, always use ChaCha20
+    (void)vault_aes_ni;
+    return CIPHER_CHACHA20POLY1305;
+#endif
 }
 
 __attribute__((used))
@@ -127,7 +132,6 @@ int vault_encrypt_with_cipher(
     vault_cipher_t cipher_type = (vault_cipher_t)cipher;
 
     if (cipher_type == CIPHER_AUTO) {
-        // cppcheck-suppress knownConditionTrueFalse
         cipher_type = vault_auto_select_cipher();
     }
 
