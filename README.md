@@ -332,7 +332,7 @@ MIT License - see [LICENSE](LICENSE) file
 
 - **GitHub Issues** - Bug reports and feature requests
 - **GitHub Discussions** - General questions and ideas
-- **Email** - your.email@example.com
+- **Email** - subhodisha2062@gmail.com
 
 ---
 
