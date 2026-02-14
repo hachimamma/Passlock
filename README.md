@@ -53,7 +53,7 @@ Your vault stays on your machine.
 
 * CLI and TUI
 * Vault logic and persistent storage
-* AES-256-GCM encryption
+* ChaCha20-Poly1305 (IETF) encryption
 * Argon2 key derivation
 * Safe wrappers around C FFI
 
@@ -105,7 +105,7 @@ Passlock/
 
 ## Features
 
-* AES-256-GCM authenticated encryption
+* ChaCha20-Poly1305 (IETF) authenticated encryption
 * Argon2 password-based key derivation
 * XOR obfuscation layer (defense in depth)
 * Secure memory wiping in C
