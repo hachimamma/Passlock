@@ -116,7 +116,9 @@ int vault_encrypt(
     }
 
     unsigned long long actual_ciphertext_len;
-    if (crypto_aead_aes256gcm_encrypt(
+    
+    // switch from 'AES-256-GCM' to 'ChaCha20-Poly1305' for encrypt func
+    if (crypto_aead_chacha20poly1305_ietf_encrypt(
             ciphertext + NONCE_LENGTH,
             &actual_ciphertext_len,
             plaintext,
@@ -179,7 +181,9 @@ int vault_decrypt(
     }
 
     unsigned long long actual_plaintext_len;
-    if (crypto_aead_aes256gcm_decrypt(
+    
+    // from 'AES-256-GCM' to 'ChaCha20-Poly1305' for decrypt func
+    if (crypto_aead_chacha20poly1305_ietf_decrypt(
             plaintext,
             &actual_plaintext_len,
             NULL,
