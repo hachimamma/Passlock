@@ -70,45 +70,45 @@ passlock tui
 
 ### Main Menu
 ```
-┌─────────────────────────────────────────┐
-│  PassLock v2.0.0                     │
+┌────────────────────────────────────────┐
+│  PassLock v2.0.0                       │
 │  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                          │
-│  View Passwords                       │
-│  Add Password                         │
-│  Edit Password                       │
-│  Delete Password                     │
-│  View History                         │
-│  Search Passwords                     │
-│  Generate Password                    │
-│  Filter by Tags                      │
-│  Lock Vault                           │
+│                                        │
+│  View Passwords                        │
+│  Add Password                          │
+│  Edit Password                         │
+│  Delete Password                       │
+│  View History                          │
+│  Search Passwords                      │
+│  Generate Password                     │
+│  Filter by Tags                        │
+│  Lock Vault                            │
 │  Exit                                  │
-│                                          │
-│  Use ↑↓ or j/k to navigate              │
-│  Press Enter to select, q to quit       │
-└─────────────────────────────────────────┘
+│                                        │
+│  Use ↑↓ or j/k to navigate             │
+│  Press Enter to select, q to quit      │
+└────────────────────────────────────────┘
 ```
 
 ### Password List (Gruvbox Theme)
 ```
- ┌─ Passwords (5 entries) ─────────────────┐
- │ Search: _                             │
+ ┌─ Passwords (5 entries) ──────────────────┐
+ │ Search: _                                │
  ├──────────────────────────────────────────┤
- │ ▶ GitHub (hachimamma)                    │
- │     work, dev                          │
- │                                           │
+ │ ▶ GitHub (hachimamma)                   │
+ │     work, dev                            │
+ │                                          │
  │   Gmail (personal@gmail.com)             │
- │     personal                            │
- │                                           │
+ │     personal                             │
+ │                                          │
  │   AWS Console (admin)                    │
- │     work, cloud                         │
- │                                           │
+ │     work, cloud                          │
+ │                                          │
  │   Bank Account (customer123)             │
- │     banking                             │
- │                                           │
+ │     banking                              │
+ │                                          │
  │   Reddit (user2024)                      │
- │     personal, social                    │
+ │     personal, social                     │
  └──────────────────────────────────────────┘
    ↑↓:Navigate  Enter:View  /:Search  q:Back
 ```
