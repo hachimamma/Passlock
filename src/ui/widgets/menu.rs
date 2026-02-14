@@ -1,5 +1,5 @@
 use super::super::app::App;
-use super::super::colors::GruvboxColors;
+use super::super::colors::ThemeColors;
 use super::super::screens::MessageType;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -23,8 +23,8 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
 
     let header_block = Block::default()
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(GruvboxColors::yellow()))
-        .style(Style::default().bg(GruvboxColors::bg0()));
+        .border_style(Style::default().fg(app.theme.yellow()))
+        .style(Style::default().bg(app.theme.bg0()));
 
     let vault_info = if let Some(ref vault) = app.vault {
         let tag_count = app.all_tags.len();
@@ -39,27 +39,27 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
             Line::from(vec![Span::styled(
                 "█▓▒░ PASSLOCK ░▒▓█",
                 Style::default()
-                    .fg(GruvboxColors::orange())
+                    .fg(app.theme.orange())
                     .add_modifier(Modifier::BOLD),
             )]),
             Line::from(""),
             Line::from(vec![
-                Span::styled("Vault: ", Style::default().fg(GruvboxColors::gray())),
+                Span::styled("Vault: ", Style::default().fg(app.theme.gray())),
                 Span::styled(
                     "UNLOCKED ",
                     Style::default()
-                        .fg(GruvboxColors::green())
+                        .fg(app.theme.green())
                         .add_modifier(Modifier::BOLD),
                 ),
-                Span::styled("│ ", Style::default().fg(GruvboxColors::gray())),
+                Span::styled("│ ", Style::default().fg(app.theme.gray())),
                 Span::styled(
                     format!("{total_count} passwords{filter_indicator} "),
-                    Style::default().fg(GruvboxColors::blue()),
+                    Style::default().fg(app.theme.blue()),
                 ),
-                Span::styled("│ ", Style::default().fg(GruvboxColors::gray())),
+                Span::styled("│ ", Style::default().fg(app.theme.gray())),
                 Span::styled(
                     format!("{tag_count} tags"),
-                    Style::default().fg(GruvboxColors::purple()),
+                    Style::default().fg(app.theme.purple()),
                 ),
             ]),
         ]
@@ -67,7 +67,7 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
         vec![
             Line::from(Span::styled(
                 "PASSLOCK",
-                Style::default().fg(GruvboxColors::red()),
+                Style::default().fg(app.theme.red()),
             )),
             Line::from(""),
             Line::from("No vault loaded"),
@@ -85,13 +85,12 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(main_layout[1]);
 
-    // Left panel - Passwords
     let left_block = Block::default()
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(GruvboxColors::green()))
+        .border_style(Style::default().fg(app.theme.green()))
         .title("═══ PASSWORDS ═══")
         .title_alignment(Alignment::Center)
-        .style(Style::default().bg(GruvboxColors::bg0()));
+        .style(Style::default().bg(app.theme.bg0()));
 
     let left_items = [
         ("1", "View All", "Browse vault"),
@@ -106,24 +105,21 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
             let is_selected = app.selected_section == 0 && i == app.selected_menu;
             let style = if is_selected {
                 Style::default()
-                    .fg(GruvboxColors::yellow())
+                    .fg(app.theme.yellow())
                     .add_modifier(Modifier::BOLD)
             } else {
-                Style::default().fg(GruvboxColors::fg())
+                Style::default().fg(app.theme.fg())
             };
             let prefix = if is_selected { "▶ " } else { "  " };
             let lines = vec![
                 Line::from(vec![
-                    Span::styled(prefix, Style::default().fg(GruvboxColors::yellow())),
-                    Span::styled(
-                        format!("[{num}] "),
-                        Style::default().fg(GruvboxColors::orange()),
-                    ),
+                    Span::styled(prefix, Style::default().fg(app.theme.yellow())),
+                    Span::styled(format!("[{num}] "), Style::default().fg(app.theme.orange())),
                     Span::styled(*title, style),
                 ]),
                 Line::from(vec![
                     Span::raw("     "),
-                    Span::styled(*desc, Style::default().fg(GruvboxColors::gray())),
+                    Span::styled(*desc, Style::default().fg(app.theme.gray())),
                 ]),
                 Line::from(""),
             ];
@@ -134,13 +130,12 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
     let left = List::new(left_list).block(left_block);
     f.render_widget(left, content_layout[0]);
 
-    // Right panel - Tools
     let right_block = Block::default()
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(GruvboxColors::purple()))
+        .border_style(Style::default().fg(app.theme.purple()))
         .title("═══ TOOLS ═══")
         .title_alignment(Alignment::Center)
-        .style(Style::default().bg(GruvboxColors::bg0()));
+        .style(Style::default().bg(app.theme.bg0()));
 
     let right_items = [
         ("4", "Filter Tags", "Sort by tags"),
@@ -156,24 +151,21 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
             let is_selected = app.selected_section == 1 && i == app.selected_menu - 3;
             let style = if is_selected {
                 Style::default()
-                    .fg(GruvboxColors::yellow())
+                    .fg(app.theme.yellow())
                     .add_modifier(Modifier::BOLD)
             } else {
-                Style::default().fg(GruvboxColors::fg())
+                Style::default().fg(app.theme.fg())
             };
             let prefix = if is_selected { "▶ " } else { "  " };
             let lines = vec![
                 Line::from(vec![
-                    Span::styled(prefix, Style::default().fg(GruvboxColors::yellow())),
-                    Span::styled(
-                        format!("[{num}] "),
-                        Style::default().fg(GruvboxColors::orange()),
-                    ),
+                    Span::styled(prefix, Style::default().fg(app.theme.yellow())),
+                    Span::styled(format!("[{num}] "), Style::default().fg(app.theme.orange())),
                     Span::styled(*title, style),
                 ]),
                 Line::from(vec![
                     Span::raw("     "),
-                    Span::styled(*desc, Style::default().fg(GruvboxColors::gray())),
+                    Span::styled(*desc, Style::default().fg(app.theme.gray())),
                 ]),
                 Line::from(""),
             ];
@@ -184,17 +176,16 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
     let right = List::new(right_list).block(right_block);
     f.render_widget(right, content_layout[1]);
 
-    // Message area
     if !app.msg.is_empty() {
         let msg_area = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Min(0), Constraint::Length(3)])
             .split(main_layout[1])[1];
         let msg_style = match app.msg_type {
-            MessageType::Success => Style::default().fg(GruvboxColors::green()),
-            MessageType::Error => Style::default().fg(GruvboxColors::red()),
-            MessageType::Info => Style::default().fg(GruvboxColors::blue()),
-            MessageType::None => Style::default().fg(GruvboxColors::fg()),
+            MessageType::Success => Style::default().fg(app.theme.green()),
+            MessageType::Error => Style::default().fg(app.theme.red()),
+            MessageType::Info => Style::default().fg(app.theme.blue()),
+            MessageType::None => Style::default().fg(app.theme.fg()),
         };
         let msg = Paragraph::new(app.msg.as_str())
             .style(msg_style)
@@ -203,15 +194,14 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
         f.render_widget(msg, msg_area);
     }
 
-    // Help text
     let help_block = Block::default()
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(GruvboxColors::gray()))
-        .style(Style::default().bg(GruvboxColors::bg0()));
+        .border_style(Style::default().fg(app.theme.gray()))
+        .style(Style::default().bg(app.theme.bg0()));
     let help =
         Paragraph::new("↑/↓: Navigate  │  ←/→: Switch section  │  Enter: Select  │  Esc: Exit")
             .block(help_block)
-            .style(Style::default().fg(GruvboxColors::gray()))
+            .style(Style::default().fg(app.theme.gray()))
             .alignment(Alignment::Center);
     f.render_widget(help, main_layout[2]);
 }

@@ -1,3 +1,4 @@
+use super::colors::Theme;
 use super::screens::{InputField, MessageType, Screen};
 use crate::crypto;
 use crate::models::{Entry, PasswordHistory, Vault};
@@ -34,6 +35,8 @@ pub struct App {
     pub active_tf: Option<String>,
     pub edit_eid: String,
     pub should_quit: bool,
+    pub theme: Theme,
+    pub theme_selector_index: usize,
 }
 
 impl App {
@@ -67,6 +70,8 @@ impl App {
             active_tf: None,
             edit_eid: String::new(),
             should_quit: false,
+            theme: Theme::default(),
+            theme_selector_index: 0,
         }
     }
 
