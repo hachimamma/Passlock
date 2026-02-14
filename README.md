@@ -74,16 +74,16 @@ passlock tui
 │  PassLock v2.0.0                       │
 │  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
 │                                        │
-│  View Passwords                        │
-│  Add Password                          │
-│  Edit Password                         │
-│  Delete Password                       │
-│  View History                          │
-│  Search Passwords                      │
-│  Generate Password                     │
-│  Filter by Tags                        │
-│  Lock Vault                            │
-│  Exit                                  │
+│ ▶ View Passwords                      │
+│ ▶ Add Password                        │
+│ ▶ Edit Password                       │
+│ ▶ Delete Password                     │
+│ ▶ View History                        │
+│ ▶ Search Passwords                    │
+│ ▶ Generate Password                   │
+│ ▶ Filter by Tags                      │
+│ ▶ Lock Vault                          │
+│ ▶ Exit                                │
 │                                        │
 │  Use ↑↓ or j/k to navigate             │
 │  Press Enter to select, q to quit      │
@@ -98,16 +98,16 @@ passlock tui
  │ ▶ GitHub (hachimamma)                   │
  │     work, dev                            │
  │                                          │
- │   Gmail (personal@gmail.com)             │
+ │ ▶ Gmail (personal@gmail.com)            │
  │     personal                             │
  │                                          │
- │   AWS Console (admin)                    │
+ │ ▶ AWS Console (admin)                   │
  │     work, cloud                          │
  │                                          │
- │   Bank Account (customer123)             │
+ │ ▶ Bank Account (customer123)            │
  │     banking                              │
  │                                          │
- │   Reddit (user2024)                      │
+ │ ▶ Reddit (user2024)                     │
  │     personal, social                     │
  └──────────────────────────────────────────┘
    ↑↓:Navigate  Enter:View  /:Search  q:Back
