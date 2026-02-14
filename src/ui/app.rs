@@ -33,6 +33,7 @@ pub struct App {
     pub select_tf: usize,
     pub active_tf: Option<String>,
     pub edit_eid: String,
+    pub should_quit: bool,
 }
 
 impl App {
@@ -65,6 +66,7 @@ impl App {
             select_tf: 0,
             active_tf: None,
             edit_eid: String::new(),
+            should_quit: false,
         }
     }
 

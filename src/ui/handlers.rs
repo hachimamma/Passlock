@@ -29,7 +29,7 @@ pub fn handle_cvi(app: &mut App, key: KeyCode) {
             app.create_vault();
         }
         KeyCode::Esc => {
-            std::process::exit(0);
+            app.should_quit = true;
         }
         _ => {}
     }
@@ -47,7 +47,7 @@ pub fn handle_uvi(app: &mut App, key: KeyCode) {
             app.unlock_vault();
         }
         KeyCode::Esc => {
-            std::process::exit(0);
+            app.should_quit = true;
         }
         _ => {}
     }
@@ -212,7 +212,7 @@ pub fn handle_vpi(app: &mut App, key: KeyCode) {
             app.set_msg("Filters cleared", MessageType::Success);
         }
         KeyCode::Esc => {
-            app.screen = Screen::MainMenu;
+            app.should_quit = true;
             app.selected_entry = 0;
         }
         _ => {}
@@ -275,7 +275,7 @@ pub fn handle_api(app: &mut App, key: KeyCode) {
             }
         }
         KeyCode::Esc => {
-            app.screen = Screen::MainMenu;
+            app.should_quit = true;
             app.ca_form();
         }
         _ => {}
@@ -338,7 +338,7 @@ pub fn handle_epi(app: &mut App, key: KeyCode) {
             }
         }
         KeyCode::Esc => {
-            app.screen = Screen::MainMenu;
+            app.should_quit = true;
             app.ca_form();
         }
         _ => {}
@@ -365,7 +365,7 @@ pub fn handle_si(app: &mut App, key: KeyCode) {
             app.screen = Screen::ViewPasswords;
         }
         KeyCode::Esc => {
-            app.screen = Screen::MainMenu;
+            app.should_quit = true;
         }
         _ => {}
     }
@@ -383,7 +383,7 @@ pub fn handle_gi(app: &mut App, key: KeyCode) {
             app.gen_pwd();
         }
         KeyCode::Esc => {
-            app.screen = Screen::MainMenu;
+            app.should_quit = true;
         }
         _ => {}
     }
@@ -416,7 +416,7 @@ pub fn handle_di(app: &mut App, key: KeyCode) {
             }
         }
         KeyCode::Esc => {
-            app.screen = Screen::MainMenu;
+            app.should_quit = true;
         }
         _ => {}
     }
@@ -451,7 +451,8 @@ pub fn handle_tfi(app: &mut App, key: KeyCode) {
             }
         }
         KeyCode::Esc => {
-            app.screen = Screen::MainMenu;
+            // flagged
+            app.should_quit = true;
         }
         _ => {}
     }

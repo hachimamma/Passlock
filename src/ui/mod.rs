@@ -26,12 +26,22 @@ use widgets::{
 pub fn run_tui() -> Result<(), Box<dyn std::error::Error>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+
+    execute!(
+        stdout,
+        crossterm::terminal::Clear(crossterm::terminal::ClearType::All),
+        EnterAlternateScreen,
+        EnableMouseCapture
+    )?;
+
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
+
     let mut app = App::new();
     app.check_vault();
+
     let res = run_app(&mut terminal, &mut app);
+
     disable_raw_mode()?;
     execute!(
         terminal.backend_mut(),
@@ -39,9 +49,11 @@ pub fn run_tui() -> Result<(), Box<dyn std::error::Error>> {
         DisableMouseCapture
     )?;
     terminal.show_cursor()?;
+
     if let Err(err) = res {
         println!("Error: {err:?}");
     }
+
     Ok(())
 }
 
@@ -50,7 +62,12 @@ fn run_app<B: ratatui::backend::Backend>(
     app: &mut App,
 ) -> io::Result<()> {
     loop {
+        if app.should_quit {
+            break;
+        }
+
         terminal.draw(|f| ui(f, app))?;
+
         if let Event::Key(key) = event::read()? {
             if key.kind == KeyEventKind::Press {
                 match app.screen {
@@ -74,8 +91,8 @@ fn run_app<B: ratatui::backend::Backend>(
             }
         }
     }
+    Ok(())
 }
-
 fn ui(f: &mut Frame, app: &App) {
     let size = f.size();
     match app.screen {
