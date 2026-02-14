@@ -148,7 +148,7 @@ passlock info cpu
 
 ## Documentation
 
-- **[Command Reference](COMMANDS.md)** - Complete guide to all commands
+- **[Command Reference](Commands.md)** - Complete guide to all commands
 - **[Security Details](SECURITY.md)** - In-depth security analysis (coming soon)
 - **[Architecture](ARCHITECTURE.md)** - How PassLock works (coming soon)
 - **[Contributing](CONTRIBUTING.md)** - Help improve PassLock!
