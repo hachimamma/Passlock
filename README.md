@@ -183,7 +183,7 @@ passlock info cpu
 
 ---
 
-## ⚡ Performance
+## Performance
 
 ```
 Encryption Speed (10 MB file):
@@ -200,7 +200,7 @@ PassLock automatically picks the fastest option!
 
 ---
 
-## 🛠️ Building from Source
+## Building from Source
 
 ### Prerequisites
 
