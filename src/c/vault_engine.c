@@ -31,18 +31,28 @@ int vault_aes_ni(void) {
 
 // auto select
 __attribute__((used))
-vault_cipher_t vault_auto_select_cipher(void) {
-#ifdef __AES__
-    // If compiled with AES support, do runtime check
-    if (vault_aes_ni()) {
-        return CIPHER_AES256GCM;
-    }
-    return CIPHER_CHACHA20POLY1305;
-#else
-    // If not compiled with AES support, always use ChaCha20
+static vault_cipher_t vault_select_aes(void) {
+    return vault_aes_ni() ? CIPHER_AES256GCM : CIPHER_CHACHA20POLY1305;
+}
+
+__attribute__((used))
+static vault_cipher_t vault_select_chacha(void) {
     (void)vault_aes_ni;
     return CIPHER_CHACHA20POLY1305;
-#endif
+}
+
+__attribute__((used))
+vault_cipher_t vault_auto_select_cipher(void) {
+    #ifdef __AES__
+        vault_cipher_t (*selectors[2])(void) = {
+            vault_select_chacha,
+            vault_select_aes
+        };
+        volatile int has_aes = vault_aes_ni();
+        return selectors[has_aes ? 1 : 0]();
+    #else
+        return vault_select_chacha();
+    #endif
 }
 
 __attribute__((used))
