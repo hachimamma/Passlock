@@ -14,11 +14,7 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
     let main_layout = Layout::default()
         .direction(Direction::Vertical)
         .margin(1)
-        .constraints([
-            Constraint::Length(5),
-            Constraint::Min(10),
-            Constraint::Length(3),
-        ])
+        .constraints([Constraint::Length(5), Constraint::Min(10)])
         .split(size);
 
     let header_block = Block::default()
@@ -193,15 +189,4 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
             .wrap(Wrap { trim: true });
         f.render_widget(msg, msg_area);
     }
-
-    let help_block = Block::default()
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(app.theme.gray()))
-        .style(Style::default().bg(app.theme.bg0()));
-    let help =
-        Paragraph::new("↑/↓: Navigate  │  ←/→: Switch section  │  Enter: Select  │  Esc: Exit")
-            .block(help_block)
-            .style(Style::default().fg(app.theme.gray()))
-            .alignment(Alignment::Center);
-    f.render_widget(help, main_layout[2]);
 }

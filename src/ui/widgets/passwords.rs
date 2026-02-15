@@ -134,7 +134,7 @@ pub fn draw_view_pwds(f: &mut Frame, size: Rect, app: &App) {
         let list = List::new(items).block(Block::default().borders(Borders::NONE));
         f.render_widget(list, chunks[1]);
     }
-    let help = Paragraph::new("↑/↓: Navigate │ E: Edit │ H: History │ F: Clear filter │ Esc: Back")
+    let help = Paragraph::new("| F: Clear filter │ Esc: Back |")
         .style(Style::default().fg(app.theme.gray()))
         .alignment(Alignment::Center);
     f.render_widget(help, chunks[2]);
@@ -283,7 +283,7 @@ pub fn draw_add_pwd(f: &mut Frame, size: Rect, app: &App) {
         f.render_widget(msg, chunks[11]);
     }
     let help =
-        Paragraph::new("Tab: Next field │ Enter: Add tag/Save │ 1-9: Remove tag │ Esc: Cancel")
+        Paragraph::new("| Tab: Next field │ Enter: Add tag/Save │ 1-9: Remove tag │ Esc: Cancel |")
             .style(Style::default().fg(app.theme.gray()))
             .alignment(Alignment::Center);
     f.render_widget(help, chunks[12]);
@@ -430,9 +430,10 @@ pub fn draw_edit_pwd(f: &mut Frame, size: Rect, app: &App) {
             .alignment(Alignment::Center);
         f.render_widget(msg, chunks[11]);
     }
-    let help = Paragraph::new("Tab: Next │ Enter: Add tag/Save │ 1-9: Remove tag │ Esc: Cancel")
-        .style(Style::default().fg(app.theme.gray()))
-        .alignment(Alignment::Center);
+    let help =
+        Paragraph::new("| Tab: Next │ Enter: Add tag/Save │ 1-9: Remove tag │ Esc: Cancel |")
+            .style(Style::default().fg(app.theme.gray()))
+            .alignment(Alignment::Center);
     f.render_widget(help, chunks[12]);
 }
 
@@ -504,7 +505,7 @@ pub fn draw_history(f: &mut Frame, size: Rect, app: &App) {
             }
         }
     }
-    let help = Paragraph::new("Esc: Back")
+    let help = Paragraph::new("| Esc: Back |")
         .style(Style::default().fg(app.theme.gray()))
         .alignment(Alignment::Center);
     f.render_widget(help, chunks[2]);
