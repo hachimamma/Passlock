@@ -11,6 +11,8 @@ pub enum Theme {
     Solarized,
     OneDark,
     Cyberpunk,
+    HighContrastDark,
+    HighContrastLight,
 }
 
 impl Theme {
@@ -24,6 +26,8 @@ impl Theme {
             Theme::Solarized,
             Theme::OneDark,
             Theme::Cyberpunk,
+            Theme::HighContrastDark,
+            Theme::HighContrastLight,
         ]
     }
 
@@ -37,6 +41,8 @@ impl Theme {
             Theme::Solarized => "Solarized Dark",
             Theme::OneDark => "One Dark",
             Theme::Cyberpunk => "Cyberpunk",
+            Theme::HighContrastDark => "High Contrast Dark",
+            Theme::HighContrastLight => "High Contrast Light",
         }
     }
 
@@ -49,13 +55,15 @@ impl Theme {
             Theme::Catppuccin => Theme::Solarized,
             Theme::Solarized => Theme::OneDark,
             Theme::OneDark => Theme::Cyberpunk,
-            Theme::Cyberpunk => Theme::Gruvbox,
+            Theme::Cyberpunk => Theme::HighContrastDark,
+            Theme::HighContrastDark => Theme::HighContrastLight,
+            Theme::HighContrastLight => Theme::Gruvbox,
         }
     }
 
     pub fn previous(self) -> Theme {
         match self {
-            Theme::Gruvbox => Theme::Cyberpunk,
+            Theme::Gruvbox => Theme::HighContrastLight,
             Theme::Dracula => Theme::Gruvbox,
             Theme::Nord => Theme::Dracula,
             Theme::TokyoNight => Theme::Nord,
@@ -63,6 +71,8 @@ impl Theme {
             Theme::Solarized => Theme::Catppuccin,
             Theme::OneDark => Theme::Solarized,
             Theme::Cyberpunk => Theme::OneDark,
+            Theme::HighContrastDark => Theme::Cyberpunk,
+            Theme::HighContrastLight => Theme::HighContrastDark,
         }
     }
 }
@@ -93,6 +103,8 @@ impl ThemeColors for Theme {
             Theme::Solarized => Color::Rgb(0, 43, 54),
             Theme::OneDark => Color::Rgb(40, 44, 52),
             Theme::Cyberpunk => Color::Rgb(16, 16, 24),
+            Theme::HighContrastDark => Color::Rgb(0, 0, 0),
+            Theme::HighContrastLight => Color::Rgb(255, 255, 255),
         }
     }
 
@@ -106,6 +118,8 @@ impl ThemeColors for Theme {
             Theme::Solarized => Color::Rgb(7, 54, 66),
             Theme::OneDark => Color::Rgb(53, 59, 69),
             Theme::Cyberpunk => Color::Rgb(24, 24, 37),
+            Theme::HighContrastDark => Color::Rgb(20, 20, 20),
+            Theme::HighContrastLight => Color::Rgb(240, 240, 240),
         }
     }
 
@@ -119,6 +133,8 @@ impl ThemeColors for Theme {
             Theme::Solarized => Color::Rgb(131, 148, 150),
             Theme::OneDark => Color::Rgb(171, 178, 191),
             Theme::Cyberpunk => Color::Rgb(0, 255, 255),
+            Theme::HighContrastDark => Color::Rgb(255, 255, 255),
+            Theme::HighContrastLight => Color::Rgb(0, 0, 0),
         }
     }
 
@@ -132,6 +148,8 @@ impl ThemeColors for Theme {
             Theme::Solarized => Color::Rgb(220, 50, 47),
             Theme::OneDark => Color::Rgb(224, 108, 117),
             Theme::Cyberpunk => Color::Rgb(255, 0, 102),
+            Theme::HighContrastDark => Color::Rgb(255, 100, 100),
+            Theme::HighContrastLight => Color::Rgb(200, 0, 0),
         }
     }
 
@@ -145,6 +163,8 @@ impl ThemeColors for Theme {
             Theme::Solarized => Color::Rgb(133, 153, 0),
             Theme::OneDark => Color::Rgb(152, 195, 121),
             Theme::Cyberpunk => Color::Rgb(0, 255, 157),
+            Theme::HighContrastDark => Color::Rgb(100, 255, 100),
+            Theme::HighContrastLight => Color::Rgb(0, 150, 0),
         }
     }
 
@@ -158,6 +178,8 @@ impl ThemeColors for Theme {
             Theme::Solarized => Color::Rgb(181, 137, 0),
             Theme::OneDark => Color::Rgb(229, 192, 123),
             Theme::Cyberpunk => Color::Rgb(255, 255, 0),
+            Theme::HighContrastDark => Color::Rgb(255, 255, 100),
+            Theme::HighContrastLight => Color::Rgb(180, 140, 0),
         }
     }
 
@@ -171,6 +193,8 @@ impl ThemeColors for Theme {
             Theme::Solarized => Color::Rgb(38, 139, 210),
             Theme::OneDark => Color::Rgb(97, 175, 239),
             Theme::Cyberpunk => Color::Rgb(0, 170, 255),
+            Theme::HighContrastDark => Color::Rgb(100, 150, 255),
+            Theme::HighContrastLight => Color::Rgb(0, 0, 200),
         }
     }
 
@@ -184,6 +208,8 @@ impl ThemeColors for Theme {
             Theme::Solarized => Color::Rgb(108, 113, 196),
             Theme::OneDark => Color::Rgb(198, 120, 221),
             Theme::Cyberpunk => Color::Rgb(191, 0, 255),
+            Theme::HighContrastDark => Color::Rgb(255, 100, 255),
+            Theme::HighContrastLight => Color::Rgb(150, 0, 150),
         }
     }
 
@@ -197,6 +223,8 @@ impl ThemeColors for Theme {
             Theme::Solarized => Color::Rgb(42, 161, 152),
             Theme::OneDark => Color::Rgb(86, 182, 194),
             Theme::Cyberpunk => Color::Rgb(0, 255, 255),
+            Theme::HighContrastDark => Color::Rgb(100, 255, 255),
+            Theme::HighContrastLight => Color::Rgb(0, 150, 150),
         }
     }
 
@@ -210,6 +238,8 @@ impl ThemeColors for Theme {
             Theme::Solarized => Color::Rgb(203, 75, 22),
             Theme::OneDark => Color::Rgb(209, 154, 102),
             Theme::Cyberpunk => Color::Rgb(255, 102, 0),
+            Theme::HighContrastDark => Color::Rgb(255, 180, 100),
+            Theme::HighContrastLight => Color::Rgb(200, 100, 0),
         }
     }
 
@@ -223,6 +253,8 @@ impl ThemeColors for Theme {
             Theme::Solarized => Color::Rgb(88, 110, 117),
             Theme::OneDark => Color::Rgb(92, 99, 112),
             Theme::Cyberpunk => Color::Rgb(128, 128, 160),
+            Theme::HighContrastDark => Color::Rgb(180, 180, 180),
+            Theme::HighContrastLight => Color::Rgb(100, 100, 100),
         }
     }
 }
