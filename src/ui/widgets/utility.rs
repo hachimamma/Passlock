@@ -399,9 +399,10 @@ pub fn draw_theme_selector(f: &mut Frame, area: Rect, app: &App) {
     f.render_widget(help, chunks[2]);
 }
 
+#[allow(clippy::too_many_lines)]
 pub fn draw_options_menu(f: &mut Frame, area: Rect, app: &App) {
     use super::super::colors::ThemeColors;
-    
+
     let block = Block::default()
         .borders(Borders::NONE)
         .style(Style::default().bg(app.theme.bg0()));
@@ -411,117 +412,122 @@ pub fn draw_options_menu(f: &mut Frame, area: Rect, app: &App) {
         .direction(Direction::Vertical)
         .margin(0)
         .constraints([
-            Constraint::Percentage(10),  // top padding
-            Constraint::Length(7),       // Pass title
-            Constraint::Length(4),       // spacing
-            Constraint::Length(3),       // options
-            Constraint::Length(3),       // spacing
-            Constraint::Length(3),       // help
-            Constraint::Length(3),       // spacing
-            Constraint::Length(3),       // quit
-            Constraint::Percentage(10),  // bottom padding
+            Constraint::Percentage(10), // top padding
+            Constraint::Length(7),      // Pass title
+            Constraint::Length(4),      // spacing
+            Constraint::Length(3),      // options
+            Constraint::Length(3),      // spacing
+            Constraint::Length(3),      // help
+            Constraint::Length(3),      // spacing
+            Constraint::Length(3),      // quit
+            Constraint::Percentage(10), // bottom padding
         ])
         .split(area);
 
     let title_lines = vec![
-        Line::from(vec![
-            Span::styled("██████╗  █████╗ ███████╗███████╗", 
-                Style::default().fg(app.theme.red()).add_modifier(Modifier::BOLD)),
-        ]),
-        Line::from(vec![
-            Span::styled("██╔══██╗██╔══██╗██╔════╝██╔════╝", 
-                Style::default().fg(app.theme.red()).add_modifier(Modifier::BOLD)),
-        ]),
-        Line::from(vec![
-            Span::styled("██████╔╝███████║███████╗███████╗", 
-                Style::default().fg(app.theme.red()).add_modifier(Modifier::BOLD)),
-        ]),
-        Line::from(vec![
-            Span::styled("██╔═══╝ ██╔══██║╚════██║╚════██║", 
-                Style::default().fg(app.theme.red()).add_modifier(Modifier::BOLD)),
-        ]),
-        Line::from(vec![
-            Span::styled("██║     ██║  ██║███████║███████║", 
-                Style::default().fg(app.theme.red()).add_modifier(Modifier::BOLD)),
-        ]),
-        Line::from(vec![
-            Span::styled("╚═╝     ╚═╝  ╚═╝╚══════╝╚══════╝", 
-                Style::default().fg(app.theme.red()).add_modifier(Modifier::BOLD)),
-        ]),
-        Line::from(vec![
-            Span::styled("           v2.2.1", 
-                Style::default().fg(app.theme.gray())),
-        ]),
+        Line::from(vec![Span::styled(
+            "██████╗  █████╗ ███████╗███████╗",
+            Style::default()
+                .fg(app.theme.red())
+                .add_modifier(Modifier::BOLD),
+        )]),
+        Line::from(vec![Span::styled(
+            "██╔══██╗██╔══██╗██╔════╝██╔════╝",
+            Style::default()
+                .fg(app.theme.red())
+                .add_modifier(Modifier::BOLD),
+        )]),
+        Line::from(vec![Span::styled(
+            "██████╔╝███████║███████╗███████╗",
+            Style::default()
+                .fg(app.theme.red())
+                .add_modifier(Modifier::BOLD),
+        )]),
+        Line::from(vec![Span::styled(
+            "██╔═══╝ ██╔══██║╚════██║╚════██║",
+            Style::default()
+                .fg(app.theme.red())
+                .add_modifier(Modifier::BOLD),
+        )]),
+        Line::from(vec![Span::styled(
+            "██║     ██║  ██║███████║███████║",
+            Style::default()
+                .fg(app.theme.red())
+                .add_modifier(Modifier::BOLD),
+        )]),
+        Line::from(vec![Span::styled(
+            "╚═╝     ╚═╝  ╚═╝╚══════╝╚══════╝",
+            Style::default()
+                .fg(app.theme.red())
+                .add_modifier(Modifier::BOLD),
+        )]),
+        Line::from(vec![Span::styled(
+            "           v2.2.1",
+            Style::default().fg(app.theme.gray()),
+        )]),
     ];
 
-    let title = Paragraph::new(title_lines)
-        .alignment(Alignment::Center);
+    let title = Paragraph::new(title_lines).alignment(Alignment::Center);
     f.render_widget(title, chunks[1]);
 
     let options_style = if app.options_menu_index == 0 {
-        Style::default().fg(app.theme.orange()).add_modifier(Modifier::BOLD)
+        Style::default()
+            .fg(app.theme.orange())
+            .add_modifier(Modifier::BOLD)
     } else {
         Style::default().fg(app.theme.gray())
     };
 
     let options_lines = vec![
-        Line::from(vec![
-            Span::styled("▄▀▀▄ █▀▀█ ▀▀█▀▀ ▀█▀ ▄▀▀▄ █▀▀▄ █▀▀", options_style),
-        ]),
-        Line::from(vec![
-            Span::styled("█  █ █  █   █    █  █  █ █  █ ▀▀█", options_style),
-        ]),
-        Line::from(vec![
-            Span::styled(" ▀▀  █▀▀▀   ▀   ▀▀▀  ▀▀  ▀  ▀ ▀▀▀", options_style),
-        ]),
+        Line::from(vec![Span::styled(
+            "▄▀▀▄ █▀▀█ ▀▀█▀▀ ▀█▀ ▄▀▀▄ █▀▀▄ █▀▀",
+            options_style,
+        )]),
+        Line::from(vec![Span::styled(
+            "█  █ █  █   █    █  █  █ █  █ ▀▀█",
+            options_style,
+        )]),
+        Line::from(vec![Span::styled(
+            " ▀▀  █▀▀▀   ▀   ▀▀▀  ▀▀  ▀  ▀ ▀▀▀",
+            options_style,
+        )]),
     ];
 
-    let options = Paragraph::new(options_lines)
-        .alignment(Alignment::Center);
+    let options = Paragraph::new(options_lines).alignment(Alignment::Center);
     f.render_widget(options, chunks[3]);
 
     let help_style = if app.options_menu_index == 1 {
-        Style::default().fg(app.theme.yellow()).add_modifier(Modifier::BOLD)
+        Style::default()
+            .fg(app.theme.yellow())
+            .add_modifier(Modifier::BOLD)
     } else {
         Style::default().fg(app.theme.gray())
     };
 
     let help_lines = vec![
-        Line::from(vec![
-            Span::styled("█  █ █▀▀▀ █   █▀▀█", help_style),
-        ]),
-        Line::from(vec![
-            Span::styled("█▀▀█ █▀▀  █   █  █", help_style),
-        ]),
-        Line::from(vec![
-            Span::styled("▀  ▀ ▀▀▀▀ ▀▀▀ █▀▀▀", help_style),
-        ]),
+        Line::from(vec![Span::styled("█  █ █▀▀▀ █   █▀▀█", help_style)]),
+        Line::from(vec![Span::styled("█▀▀█ █▀▀  █   █  █", help_style)]),
+        Line::from(vec![Span::styled("▀  ▀ ▀▀▀▀ ▀▀▀ █▀▀▀", help_style)]),
     ];
 
-    let help = Paragraph::new(help_lines)
-        .alignment(Alignment::Center);
+    let help = Paragraph::new(help_lines).alignment(Alignment::Center);
     f.render_widget(help, chunks[5]);
 
     let quit_style = if app.options_menu_index == 2 {
-        Style::default().fg(app.theme.yellow()).add_modifier(Modifier::BOLD)
+        Style::default()
+            .fg(app.theme.yellow())
+            .add_modifier(Modifier::BOLD)
     } else {
         Style::default().fg(app.theme.gray())
     };
 
     let quit_lines = vec![
-        Line::from(vec![
-            Span::styled("▄▀▀▄ █  █ ▀█▀ ▀▀█▀▀", quit_style),
-        ]),
-        Line::from(vec![
-            Span::styled("█  █ █  █  █    █  ", quit_style),
-        ]),
-        Line::from(vec![
-            Span::styled(" ▀▀   ▀▀  ▀▀▀   ▀  ", quit_style),
-        ]),
+        Line::from(vec![Span::styled("▄▀▀▄ █  █ ▀█▀ ▀▀█▀▀", quit_style)]),
+        Line::from(vec![Span::styled("█  █ █  █  █    █  ", quit_style)]),
+        Line::from(vec![Span::styled(" ▀▀   ▀▀  ▀▀▀   ▀  ", quit_style)]),
     ];
 
-    let quit = Paragraph::new(quit_lines)
-        .alignment(Alignment::Center);
+    let quit = Paragraph::new(quit_lines).alignment(Alignment::Center);
     f.render_widget(quit, chunks[7]);
 }
 
