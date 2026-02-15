@@ -5,7 +5,7 @@ pub mod screens;
 pub mod widgets;
 
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyEventKind},
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -70,39 +70,60 @@ fn run_app<B: ratatui::backend::Backend>(
 
         terminal.draw(|f| ui(f, app))?;
 
-        if let Event::Key(key) = event::read()? {
-            if key.kind == KeyEventKind::Press {
+        if let Event::Key(key_event) = event::read()? {
+            if key_event.kind == KeyEventKind::Press {
                 match app.screen {
                     Screen::VaultCheck => {}
-                    Screen::CreateVault => handle_cvi(app, key.code),
-                    Screen::UnlockVault => handle_uvi(app, key.code),
+                    Screen::CreateVault => handle_cvi(app, key_event.code),
+                    Screen::UnlockVault => handle_uvi(app, key_event.code),
                     Screen::MainMenu => {
-                        if handle_mmi(app, key.code) {
+                        if handle_mmi(app, key_event.code) {
                             return Ok(());
                         }
                     }
-                    Screen::ViewPasswords => handle_vpi(app, key.code),
-                    Screen::AddPassword => handle_api(app, key.code),
-                    Screen::EditPassword => handle_epi(app, key.code),
-                    Screen::ViewHistory => handle_vhi(app, key.code),
-                    Screen::SearchPassword => handle_si(app, key.code),
-                    Screen::GeneratePassword => handle_gi(app, key.code),
-                    Screen::DeletePassword => handle_di(app, key.code),
-                    Screen::FilterByTag => handle_tfi(app, key.code),
-                    Screen::ThemeSelector => handle_theme_selector(app, key.code),
+                    Screen::ViewPasswords => handle_vpi(app, key_event.code),
+                    Screen::AddPassword => {
+                        if key_event.code == KeyCode::Char('s')
+                            && key_event
+                                .modifiers
+                                .contains(crossterm::event::KeyModifiers::CONTROL)
+                        {
+                            app.add_entry();
+                        } else {
+                            handle_api(app, key_event.code);
+                        }
+                    }
+                    Screen::EditPassword => {
+                        if key_event.code == KeyCode::Char('s')
+                            && key_event
+                                .modifiers
+                                .contains(crossterm::event::KeyModifiers::CONTROL)
+                        {
+                            app.edit_entry();
+                        } else {
+                            handle_epi(app, key_event.code);
+                        }
+                    }
+                    Screen::ViewHistory => handle_vhi(app, key_event.code),
+                    Screen::SearchPassword => handle_si(app, key_event.code),
+                    Screen::GeneratePassword => handle_gi(app, key_event.code),
+                    Screen::DeletePassword => handle_di(app, key_event.code),
+                    Screen::FilterByTag => handle_tfi(app, key_event.code),
+                    Screen::ThemeSelector => handle_theme_selector(app, key_event.code),
                     Screen::OptionsMenu => {
-                        if handle_options_menu(app, key.code) {
+                        if handle_options_menu(app, key_event.code) {
                             return Ok(());
                         }
                     }
-                    Screen::Help => handle_help_screen(app, key.code),
-                    Screen::Settings => handle_settings_screen(app, key.code),
+                    Screen::Help => handle_help_screen(app, key_event.code),
+                    Screen::Settings => handle_settings_screen(app, key_event.code),
                 }
             }
         }
     }
     Ok(())
 }
+
 fn ui(f: &mut Frame, app: &App) {
     let size = f.size();
     match app.screen {
