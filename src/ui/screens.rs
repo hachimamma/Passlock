@@ -13,6 +13,9 @@ pub enum Screen {
     DeletePassword,
     FilterByTag,
     ThemeSelector,
+    OptionsMenu,
+    Help,
+    Settings,
 }
 
 #[derive(Clone, PartialEq)]

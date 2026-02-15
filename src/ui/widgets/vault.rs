@@ -126,7 +126,7 @@ pub fn draw_create_vault(f: &mut Frame, size: Rect, app: &App) {
         f.render_widget(msg, chunks[7]);
     }
 
-    let help = Paragraph::new("Tab: Switch | Enter: Create | Esc: Quit")
+    let help = Paragraph::new("| Tab: Switch | Enter: Create | Esc: Quit |")
         .style(Style::default().fg(app.theme.gray()))
         .alignment(Alignment::Center);
     f.render_widget(help, chunks[8]);
@@ -180,7 +180,7 @@ pub fn draw_unlock_vault(f: &mut Frame, size: Rect, app: &App) {
         f.render_widget(msg, chunks[3]);
     }
 
-    let help = Paragraph::new("Enter: Unlock | Esc: Quit")
+    let help = Paragraph::new("| Enter: Unlock | Esc: Quit |")
         .style(Style::default().fg(app.theme.gray()))
         .alignment(Alignment::Center);
     f.render_widget(help, chunks[4]);

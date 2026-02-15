@@ -37,6 +37,8 @@ pub struct App {
     pub should_quit: bool,
     pub theme: Theme,
     pub theme_selector_index: usize,
+    pub options_menu_index: usize,
+    pub settings_menu_index: usize,
 }
 
 impl App {
@@ -72,6 +74,8 @@ impl App {
             should_quit: false,
             theme: Theme::default(),
             theme_selector_index: 0,
+            options_menu_index: 0,
+            settings_menu_index: 0,
         }
     }
 

@@ -130,7 +130,11 @@ pub fn handle_mmi(app: &mut App, key: KeyCode) -> bool {
                 }
             }
         }
-        KeyCode::Char('7') | KeyCode::Esc => return true,
+        KeyCode::Char('7') => return true,
+        KeyCode::Esc => {
+            app.screen = Screen::OptionsMenu;
+            app.options_menu_index = 0;
+        }
         KeyCode::Char('8' | 't' | 'T') => {
             use super::colors::Theme;
             app.screen = Screen::ThemeSelector;
@@ -230,22 +234,30 @@ pub fn handle_vpi(app: &mut App, key: KeyCode) {
 
 pub fn handle_api(app: &mut App, key: KeyCode) {
     match key {
-        KeyCode::Char(c) => match app.add_fi {
-            0 => app.n_entry_name.push(c),
-            1 => app.n_entry_user.push(c),
-            2 => app.n_entry_pass.push(c),
-            3 => app.n_entry_url.push(c),
-            4 => {
-                if !c.is_ascii_digit() {
-                    app.tag_input.push(c);
-                } else if let Some(digit) = c.to_digit(10) {
-                    let idx = (digit as usize).saturating_sub(1);
-                    app.remove_tag(idx);
+        KeyCode::Char(c) => {
+            // Handle the 's' key specially
+            if c == 's' {
+                app.add_entry();
+            } else {
+                // Otherwise handle character input based on current field
+                match app.add_fi {
+                    0 => app.n_entry_name.push(c),
+                    1 => app.n_entry_user.push(c),
+                    2 => app.n_entry_pass.push(c),
+                    3 => app.n_entry_url.push(c),
+                    4 => {
+                        if !c.is_ascii_digit() {
+                            app.tag_input.push(c);
+                        } else if let Some(digit) = c.to_digit(10) {
+                            let idx = (digit as usize).saturating_sub(1);
+                            app.remove_tag(idx);
+                        }
+                    }
+                    5 => app.n_entry_notes.push(c),
+                    _ => {}
                 }
             }
-            5 => app.n_entry_notes.push(c),
-            _ => {}
-        },
+        }
         KeyCode::Backspace => match app.add_fi {
             0 => {
                 app.n_entry_name.pop();
@@ -273,6 +285,9 @@ pub fn handle_api(app: &mut App, key: KeyCode) {
         },
         KeyCode::Tab => {
             app.add_fi = (app.add_fi + 1) % 6;
+        }
+        KeyCode::BackTab => {
+            app.add_fi = if app.add_fi == 0 { 5 } else { app.add_fi - 1 };
         }
         KeyCode::Enter => {
             if app.add_fi == 4 {
@@ -293,22 +308,30 @@ pub fn handle_api(app: &mut App, key: KeyCode) {
 
 pub fn handle_epi(app: &mut App, key: KeyCode) {
     match key {
-        KeyCode::Char(c) => match app.add_fi {
-            0 => app.n_entry_name.push(c),
-            1 => app.n_entry_user.push(c),
-            2 => app.n_entry_pass.push(c),
-            3 => app.n_entry_url.push(c),
-            4 => {
-                if !c.is_ascii_digit() {
-                    app.tag_input.push(c);
-                } else if let Some(digit) = c.to_digit(10) {
-                    let idx = (digit as usize).saturating_sub(1);
-                    app.remove_tag(idx);
+        KeyCode::Char(c) => {
+            // Handle the 's' key specially
+            if c == 's' {
+                app.edit_entry();
+            } else {
+                // Otherwise handle character input based on current field
+                match app.add_fi {
+                    0 => app.n_entry_name.push(c),
+                    1 => app.n_entry_user.push(c),
+                    2 => app.n_entry_pass.push(c),
+                    3 => app.n_entry_url.push(c),
+                    4 => {
+                        if !c.is_ascii_digit() {
+                            app.tag_input.push(c);
+                        } else if let Some(digit) = c.to_digit(10) {
+                            let idx = (digit as usize).saturating_sub(1);
+                            app.remove_tag(idx);
+                        }
+                    }
+                    5 => app.n_entry_notes.push(c),
+                    _ => {}
                 }
             }
-            5 => app.n_entry_notes.push(c),
-            _ => {}
-        },
+        }
         KeyCode::Backspace => match app.add_fi {
             0 => {
                 app.n_entry_name.pop();
@@ -336,6 +359,9 @@ pub fn handle_epi(app: &mut App, key: KeyCode) {
         },
         KeyCode::Tab => {
             app.add_fi = (app.add_fi + 1) % 6;
+        }
+        KeyCode::BackTab => {
+            app.add_fi = if app.add_fi == 0 { 5 } else { app.add_fi - 1 };
         }
         KeyCode::Enter => {
             if app.add_fi == 4 {
@@ -508,5 +534,106 @@ pub fn handle_theme_selector(app: &mut App, key: KeyCode) {
             app.screen = Screen::MainMenu;
         }
         _ => {}
+    }
+}
+
+pub fn handle_options_menu(app: &mut App, key: KeyCode) -> bool {
+    match key {
+        KeyCode::Up | KeyCode::Char('k') => {
+            if app.options_menu_index > 0 {
+                app.options_menu_index -= 1;
+            }
+        }
+        KeyCode::Down | KeyCode::Char('j') => {
+            if app.options_menu_index < 2 {
+                app.options_menu_index += 1;
+            }
+        }
+        KeyCode::Char('1') => {
+            app.screen = Screen::Settings;
+            app.settings_menu_index = 0;
+        }
+        KeyCode::Char('2') => {
+            app.screen = Screen::Help;
+        }
+        KeyCode::Char('3') => {
+            return true; // Quit
+        }
+        KeyCode::Enter => {
+            match app.options_menu_index {
+                0 => {
+                    app.screen = Screen::Settings;
+                    app.settings_menu_index = 0;
+                }
+                1 => {
+                    app.screen = Screen::Help;
+                }
+                2 => return true, // Quit
+                _ => {}
+            }
+        }
+        KeyCode::Esc => {
+            app.screen = Screen::MainMenu;
+        }
+        _ => {}
+    }
+    false
+}
+
+pub fn handle_settings_screen(app: &mut App, key: KeyCode) {
+    match key {
+        KeyCode::Up | KeyCode::Char('k') => {
+            if app.settings_menu_index > 0 {
+                app.settings_menu_index -= 1;
+            }
+        }
+        KeyCode::Down | KeyCode::Char('j') => {
+            if app.settings_menu_index < 2 {
+                app.settings_menu_index += 1;
+            }
+        }
+        KeyCode::Char('1') => {
+            use super::colors::Theme;
+            app.screen = Screen::ThemeSelector;
+            app.theme_selector_index = Theme::all()
+                .iter()
+                .position(|t| t == &app.theme)
+                .unwrap_or(0);
+        }
+        KeyCode::Char('2') => {
+            // Auto-save toggle (future feature)
+            app.set_msg("Auto-save coming soon!", MessageType::Info);
+        }
+        KeyCode::Char('3') => {
+            // Clipboard timeout (future feature)
+            app.set_msg("Clipboard timeout coming soon!", MessageType::Info);
+        }
+        KeyCode::Enter => match app.settings_menu_index {
+            0 => {
+                use super::colors::Theme;
+                app.screen = Screen::ThemeSelector;
+                app.theme_selector_index = Theme::all()
+                    .iter()
+                    .position(|t| t == &app.theme)
+                    .unwrap_or(0);
+            }
+            1 => {
+                app.set_msg("Auto-save coming soon!", MessageType::Info);
+            }
+            2 => {
+                app.set_msg("Clipboard timeout coming soon!", MessageType::Info);
+            }
+            _ => {}
+        },
+        KeyCode::Esc => {
+            app.screen = Screen::OptionsMenu;
+        }
+        _ => {}
+    }
+}
+
+pub fn handle_help_screen(app: &mut App, key: KeyCode) {
+    if key == KeyCode::Esc || key == KeyCode::Char('q') || key == KeyCode::Char('Q') {
+        app.screen = Screen::OptionsMenu;
     }
 }

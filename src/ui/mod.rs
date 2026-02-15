@@ -14,14 +14,15 @@ use std::io;
 
 use app::App;
 use handlers::{
-    handle_api, handle_cvi, handle_di, handle_epi, handle_gi, handle_mmi, handle_si, handle_tfi,
-    handle_theme_selector, handle_uvi, handle_vhi, handle_vpi,
+    handle_api, handle_cvi, handle_di, handle_epi, handle_gi, handle_help_screen, handle_mmi,
+    handle_options_menu, handle_settings_screen, handle_si, handle_tfi, handle_theme_selector,
+    handle_uvi, handle_vhi, handle_vpi,
 };
 use screens::Screen;
 use widgets::{
     draw_add_pwd, draw_create_vault, draw_del_pwd, draw_edit_pwd, draw_filter_tags, draw_gen_pwd,
-    draw_history, draw_loading, draw_main_menu, draw_search_pwd, draw_theme_selector,
-    draw_unlock_vault, draw_view_pwds,
+    draw_help_screen, draw_history, draw_loading, draw_main_menu, draw_options_menu,
+    draw_search_pwd, draw_settings_screen, draw_theme_selector, draw_unlock_vault, draw_view_pwds,
 };
 
 pub fn run_tui() -> Result<(), Box<dyn std::error::Error>> {
@@ -89,6 +90,13 @@ fn run_app<B: ratatui::backend::Backend>(
                     Screen::DeletePassword => handle_di(app, key.code),
                     Screen::FilterByTag => handle_tfi(app, key.code),
                     Screen::ThemeSelector => handle_theme_selector(app, key.code),
+                    Screen::OptionsMenu => {
+                        if handle_options_menu(app, key.code) {
+                            return Ok(());
+                        }
+                    }
+                    Screen::Help => handle_help_screen(app, key.code),
+                    Screen::Settings => handle_settings_screen(app, key.code),
                 }
             }
         }
@@ -111,5 +119,8 @@ fn ui(f: &mut Frame, app: &App) {
         Screen::DeletePassword => draw_del_pwd(f, size, app),
         Screen::FilterByTag => draw_filter_tags(f, size, app),
         Screen::ThemeSelector => draw_theme_selector(f, size, app),
+        Screen::OptionsMenu => draw_options_menu(f, size, app),
+        Screen::Help => draw_help_screen(f, size, app),
+        Screen::Settings => draw_settings_screen(f, size, app),
     }
 }
