@@ -6,7 +6,7 @@ pub mod screens;
 pub mod widgets;
 
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind, MouseButton, MouseEventKind},
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyEventKind},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -138,103 +138,35 @@ fn run_app<B: ratatui::backend::Backend>(
 
         terminal.draw(|f| ui(f, app))?;
 
-        match event::read()? {
-            Event::Mouse(mouse_event) => {
-                match mouse_event.kind {
-                    MouseEventKind::Down(MouseButton::Right) => {
-                        if app.screen == Screen::ViewPasswords
-                            || app.screen == Screen::SearchPassword
-                        {
-                            let y = mouse_event.row;
-                            let x = mouse_event.column;
-                            let header_offset = 5u16;
-                            if y > header_offset {
-                                let entry_idx = ((y - header_offset) / 7) as usize;
-                                if entry_idx < app.entry_disp.len() {
-                                    app.context_menu_visible = true;
-                                    app.context_menu_entry_idx = entry_idx;
-                                    app.context_menu_selected = 0;
-                                    app.context_menu_x = x;
-                                    app.context_menu_y = y;
-                                }
-                            }
+        if let Event::Key(key) = event::read()? {
+            if key.kind == KeyEventKind::Press {
+                match app.screen {
+                    Screen::VaultCheck => {}
+                    Screen::CreateVault => handle_cvi(app, key.code),
+                    Screen::UnlockVault => handle_uvi(app, key.code),
+                    Screen::MainMenu => {
+                        if handle_mmi(app, key.code) {
+                            return Ok(());
                         }
                     }
-                    MouseEventKind::Down(MouseButton::Left) => {
-                        if app.context_menu_visible {
-                            handle_context_menu_click(app, mouse_event.column, mouse_event.row);
-                        } else {
-                            app.context_menu_visible = false;
-                        }
-                    }
-                    MouseEventKind::ScrollUp => {
-                        if app.screen == Screen::ViewPasswords && app.selected_entry > 0 {
-                            app.selected_entry -= 1;
-                        }
-                    }
-                    MouseEventKind::ScrollDown => {
-                        if app.screen == Screen::ViewPasswords
-                            && app.selected_entry < app.entry_disp.len().saturating_sub(1)
-                        {
-                            app.selected_entry += 1;
-                        }
-                    }
-                    _ => {}
-                }
-            }
-            Event::Key(key_event) => {
-                if key_event.kind == KeyEventKind::Press {
-                    if app.context_menu_visible {
-                        app.context_menu_visible = false;
-                        continue;
-                    }
-
-                    match app.screen {
-                        Screen::VaultCheck => {}
-                        Screen::CreateVault => handle_cvi(app, key_event.code),
-                        Screen::UnlockVault => handle_uvi(app, key_event.code),
-                        Screen::MainMenu => {
-                            if handle_mmi(app, key_event.code) {
-                                return Ok(());
-                            }
-                        }
-                        Screen::ViewPasswords => handle_vpi(app, key_event.code),
-                        Screen::AddPassword => {
-                            if key_event.code == KeyCode::Char('s')
-                                && key_event
-                                    .modifiers
-                                    .contains(crossterm::event::KeyModifiers::CONTROL)
-                            {
-                                app.add_entry();
-                            } else {
-                                handle_api(app, key_event.code);
-                            }
-                        }
-                        Screen::EditPassword => {
-                            if key_event.code == KeyCode::Char('s')
-                                && key_event
-                                    .modifiers
-                                    .contains(crossterm::event::KeyModifiers::CONTROL)
-                            {
-                                app.edit_entry();
-                            } else {
-                                handle_epi(app, key_event.code);
-                            }
-                        }
-                        Screen::ViewHistory => handle_vhi(app, key_event.code),
-                        Screen::SearchPassword => handle_si(app, key_event.code),
-                        Screen::GeneratePassword => handle_gi(app, key_event.code),
-                        Screen::DeletePassword => handle_di(app, key_event.code),
-                        Screen::FilterByTag => handle_tfi(app, key_event.code),
-                        Screen::ThemeSelector => handle_theme_selector(app, key_event.code),
-                        Screen::OptionsMenu => {
-                            if handle_options_menu(app, key_event.code) {
-                                return Ok(());
-                            }
+                    Screen::ViewPasswords => handle_vpi(app, key.code),
+                    Screen::AddPassword => handle_api(app, key.code),
+                    Screen::EditPassword => handle_epi(app, key.code),
+                    Screen::ViewHistory => handle_vhi(app, key.code),
+                    Screen::SearchPassword => handle_si(app, key.code),
+                    Screen::GeneratePassword => handle_gi(app, key.code),
+                    Screen::DeletePassword => handle_di(app, key.code),
+                    Screen::FilterByTag => handle_tfi(app, key.code),
+                    Screen::ThemeSelector => handle_theme_selector(app, key.code),
+                    Screen::OptionsMenu => {
+                        if handle_options_menu(app, key.code) {
+                            return Ok(());
                         }
                         Screen::Help => handle_help_screen(app, key_event.code),
                         Screen::Settings => handle_settings_screen(app, key_event.code),
                     }
+                    Screen::Help => handle_help_screen(app, key.code),
+                    Screen::Settings => handle_settings_screen(app, key.code),
                 }
             }
             _ => {}

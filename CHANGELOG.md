@@ -7,7 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [2.0.0] - 2025-02-15
+
+## [2.2.3] - 2026-02-16
+
+### Added
+- Options menu with ASCII art
+- 8 beautiful themes (Gruvbox, Dracula, Nord, Tokyo Night, Catppuccin, Solarized, One Dark, Cyberpunk)
+- Settings screen with theme selector
+- Comprehensive help screen with all keybinds
+- Shift+Tab to navigate backwards through fields
+- Ctrl+S to save from any field in add/edit screens
+
+### Changed
+- Removed redundant help text from main menu (now in Help screen)
+- Esc in main menu now opens Options menu
+- Exit moved to '7' key, theme selector on 'T' or '8'
+
+### Fixed
+- Terminal cleanup issues when pressing Esc
+- Ctrl+S now properly saves instead of typing 's'
+
+## [2.0.0] - 2026-02-15
 
 ### Major Release - Complete Rewrite
 
@@ -100,7 +120,7 @@ Special thanks to:
 
 ---
 
-## [1.0.0] - 2024-XX-XX
+## [1.0.0] - 2025-XX-XX
 
 ### Initial Release
 

@@ -234,30 +234,22 @@ pub fn handle_vpi(app: &mut App, key: KeyCode) {
 
 pub fn handle_api(app: &mut App, key: KeyCode) {
     match key {
-        KeyCode::Char(c) => {
-            // Handle the 's' key specially
-            if c == 's' {
-                app.add_entry();
-            } else {
-                // Otherwise handle character input based on current field
-                match app.add_fi {
-                    0 => app.n_entry_name.push(c),
-                    1 => app.n_entry_user.push(c),
-                    2 => app.n_entry_pass.push(c),
-                    3 => app.n_entry_url.push(c),
-                    4 => {
-                        if !c.is_ascii_digit() {
-                            app.tag_input.push(c);
-                        } else if let Some(digit) = c.to_digit(10) {
-                            let idx = (digit as usize).saturating_sub(1);
-                            app.remove_tag(idx);
-                        }
-                    }
-                    5 => app.n_entry_notes.push(c),
-                    _ => {}
+        KeyCode::Char(c) => match app.add_fi {
+            0 => app.n_entry_name.push(c),
+            1 => app.n_entry_user.push(c),
+            2 => app.n_entry_pass.push(c),
+            3 => app.n_entry_url.push(c),
+            4 => {
+                if !c.is_ascii_digit() {
+                    app.tag_input.push(c);
+                } else if let Some(digit) = c.to_digit(10) {
+                    let idx = (digit as usize).saturating_sub(1);
+                    app.remove_tag(idx);
                 }
             }
-        }
+            5 => app.n_entry_notes.push(c),
+            _ => {}
+        },
         KeyCode::Backspace => match app.add_fi {
             0 => {
                 app.n_entry_name.pop();
@@ -308,30 +300,22 @@ pub fn handle_api(app: &mut App, key: KeyCode) {
 
 pub fn handle_epi(app: &mut App, key: KeyCode) {
     match key {
-        KeyCode::Char(c) => {
-            // Handle the 's' key specially
-            if c == 's' {
-                app.edit_entry();
-            } else {
-                // Otherwise handle character input based on current field
-                match app.add_fi {
-                    0 => app.n_entry_name.push(c),
-                    1 => app.n_entry_user.push(c),
-                    2 => app.n_entry_pass.push(c),
-                    3 => app.n_entry_url.push(c),
-                    4 => {
-                        if !c.is_ascii_digit() {
-                            app.tag_input.push(c);
-                        } else if let Some(digit) = c.to_digit(10) {
-                            let idx = (digit as usize).saturating_sub(1);
-                            app.remove_tag(idx);
-                        }
-                    }
-                    5 => app.n_entry_notes.push(c),
-                    _ => {}
+        KeyCode::Char(c) => match app.add_fi {
+            0 => app.n_entry_name.push(c),
+            1 => app.n_entry_user.push(c),
+            2 => app.n_entry_pass.push(c),
+            3 => app.n_entry_url.push(c),
+            4 => {
+                if !c.is_ascii_digit() {
+                    app.tag_input.push(c);
+                } else if let Some(digit) = c.to_digit(10) {
+                    let idx = (digit as usize).saturating_sub(1);
+                    app.remove_tag(idx);
                 }
             }
-        }
+            5 => app.n_entry_notes.push(c),
+            _ => {}
+        },
         KeyCode::Backspace => match app.add_fi {
             0 => {
                 app.n_entry_name.pop();
@@ -557,21 +541,19 @@ pub fn handle_options_menu(app: &mut App, key: KeyCode) -> bool {
             app.screen = Screen::Help;
         }
         KeyCode::Char('3') => {
-            return true; // Quit
+            return true;
         }
-        KeyCode::Enter => {
-            match app.options_menu_index {
-                0 => {
-                    app.screen = Screen::Settings;
-                    app.settings_menu_index = 0;
-                }
-                1 => {
-                    app.screen = Screen::Help;
-                }
-                2 => return true, // Quit
-                _ => {}
+        KeyCode::Enter => match app.options_menu_index {
+            0 => {
+                app.screen = Screen::Settings;
+                app.settings_menu_index = 0;
             }
-        }
+            1 => {
+                app.screen = Screen::Help;
+            }
+            2 => return true,
+            _ => {}
+        },
         KeyCode::Esc => {
             app.screen = Screen::MainMenu;
         }
@@ -601,11 +583,11 @@ pub fn handle_settings_screen(app: &mut App, key: KeyCode) {
                 .unwrap_or(0);
         }
         KeyCode::Char('2') => {
-            // Auto-save toggle (future feature)
+            // auto save toggle (future feature)
             app.set_msg("Auto-save coming soon!", MessageType::Info);
         }
         KeyCode::Char('3') => {
-            // Clipboard timeout (future feature)
+            // clipboard timeout (future feature)
             app.set_msg("Clipboard timeout coming soon!", MessageType::Info);
         }
         KeyCode::Enter => match app.settings_menu_index {
