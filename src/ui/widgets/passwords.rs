@@ -572,3 +572,91 @@ pub fn draw_del_pwd(f: &mut Frame, size: Rect, app: &App) {
         .alignment(Alignment::Center);
     f.render_widget(help, chunks[3]);
 }
+
+pub fn draw_context_menu(f: &mut Frame, app: &App) {
+    use super::super::colors::ThemeColors;
+
+    if !app.context_menu_visible {
+        return;
+    }
+
+    let entry = if app.context_menu_entry_idx < app.entry_disp.len() {
+        &app.entry_disp[app.context_menu_entry_idx]
+    } else {
+        return;
+    };
+
+    let has_url = entry.url.is_some();
+
+    let items = vec![
+        ("󰆒", "Copy Password", true),
+        ("󰀄", "Copy Username", true),
+        ("󰖟", "Copy URL",      has_url),
+        ("󰏫", "Edit Entry",    true),
+        ("󰔩", "View History",  true),
+    ];
+
+    let menu_width = 24u16;
+    let menu_height = (items.len() + 2) as u16;
+
+    let screen_width = f.size().width;
+    let screen_height = f.size().height;
+
+    let menu_x = if app.context_menu_x + menu_width > screen_width {
+        screen_width.saturating_sub(menu_width)
+    } else {
+        app.context_menu_x
+    };
+
+    let menu_y = if app.context_menu_y + menu_height > screen_height {
+        screen_height.saturating_sub(menu_height)
+    } else {
+        app.context_menu_y
+    };
+
+    let area = Rect::new(menu_x, menu_y, menu_width, menu_height);
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(
+            Style::default()
+                .fg(app.theme.orange())
+                .add_modifier(Modifier::BOLD),
+        )
+        .style(Style::default().bg(app.theme.bg1()));
+
+    let inner = block.inner(area);
+    f.render_widget(block, area);
+
+    let list_items: Vec<ListItem> = items
+        .iter()
+        .enumerate()
+        .map(|(i, (icon, label, enabled))| {
+            let style = if !enabled {
+                Style::default().fg(app.theme.gray())
+            } else if i == app.context_menu_selected {
+                Style::default()
+                    .fg(app.theme.yellow())
+                    .add_modifier(Modifier::BOLD)
+                    .bg(app.theme.bg0())
+            } else {
+                Style::default().fg(app.theme.fg())
+            };
+
+            ListItem::new(Line::from(vec![
+                Span::styled(
+                    format!(" {} ", icon),
+                    Style::default().fg(if *enabled {
+                        app.theme.orange()
+                    } else {
+                        app.theme.gray()
+                    }),
+                ),
+                Span::styled(*label, style),
+            ]))
+        })
+        .collect();
+
+    let list = List::new(list_items);
+    f.render_widget(list, inner);
+}

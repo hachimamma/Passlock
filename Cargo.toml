@@ -19,6 +19,7 @@ libc = "0.2"
 ratatui = "0.26"
 crossterm = "0.27"
 hex = "0.4"
+arboard = "3.3"
 
 [build-dependencies]
 cc = "1.0"
