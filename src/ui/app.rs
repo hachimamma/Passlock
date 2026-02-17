@@ -5,6 +5,7 @@ use crate::models::{Entry, PasswordHistory, Vault};
 use crate::storage;
 use std::collections::HashMap;
 
+#[allow(dead_code)]
 pub struct App {
     pub screen: Screen,
     pub vault: Option<Vault>,
@@ -20,7 +21,6 @@ pub struct App {
     pub entry_disp: Vec<Entry>,
     pub search_query: String,
     pub gen_pwd: String,
-    #[allow(dead_code)]
     pub scroll_offset: usize,
     pub n_entry_name: String,
     pub n_entry_user: String,
