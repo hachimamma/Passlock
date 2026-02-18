@@ -588,12 +588,12 @@ pub fn draw_context_menu(f: &mut Frame, app: &App) {
 
     let has_url = entry.url.is_some();
 
-    let items = vec![
+    let items = [
         ("󰆒", "Copy Password", true),
         ("󰀄", "Copy Username", true),
-        ("󰖟", "Copy URL",      has_url),
-        ("󰏫", "Edit Entry",    true),
-        ("󰔩", "View History",  true),
+        ("󰖟", "Copy URL", has_url),
+        ("󰏫", "Edit Entry", true),
+        ("󰔩", "View History", true),
     ];
 
     let menu_width = 24u16;
@@ -645,7 +645,7 @@ pub fn draw_context_menu(f: &mut Frame, app: &App) {
 
             ListItem::new(Line::from(vec![
                 Span::styled(
-                    format!(" {} ", icon),
+                    format!(" {icon} "),
                     Style::default().fg(if *enabled {
                         app.theme.orange()
                     } else {

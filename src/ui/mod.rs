@@ -6,7 +6,10 @@ pub mod screens;
 pub mod widgets;
 
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind, MouseButton, MouseEventKind},
+    event::{
+        self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind, MouseButton,
+        MouseEventKind,
+    },
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -62,6 +65,7 @@ pub fn run_tui() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn handle_context_menu_click(app: &mut App, click_x: u16, click_y: u16) {
+    use crate::ui::clipboard;
     use screens::MessageType;
 
     let menu_x = app.context_menu_x;
@@ -87,20 +91,58 @@ fn handle_context_menu_click(app: &mut App, click_x: u16, click_y: u16) {
 
         match item {
             0 => {
+                eprintln!("DEBUG: Copy Password clicked - {}", entry.p);
                 let result = clipboard::copy_with_timeout(&entry.p, TIMEOUT);
-                app.clipboard_countdown = if result.success { Some(result.expires_at) } else { None };
-                app.set_msg(&result.message, if result.success { MessageType::Success } else { MessageType::Error });
+                eprintln!(
+                    "DEBUG: Result - success: {}, msg: {}",
+                    result.success, result.message
+                );
+                app.clipboard_countdown = if result.success {
+                    Some(result.expires_at)
+                } else {
+                    None
+                };
+                app.set_msg(
+                    &result.message,
+                    if result.success {
+                        MessageType::Success
+                    } else {
+                        MessageType::Error
+                    },
+                );
             }
             1 => {
                 let result = clipboard::copy_with_timeout(&entry.u, TIMEOUT);
-                app.clipboard_countdown = if result.success { Some(result.expires_at) } else { None };
-                app.set_msg(&result.message, if result.success { MessageType::Success } else { MessageType::Error });
+                app.clipboard_countdown = if result.success {
+                    Some(result.expires_at)
+                } else {
+                    None
+                };
+                app.set_msg(
+                    &result.message,
+                    if result.success {
+                        MessageType::Success
+                    } else {
+                        MessageType::Error
+                    },
+                );
             }
             2 => {
                 if let Some(ref url) = entry.url {
                     let result = clipboard::copy_with_timeout(url, TIMEOUT);
-                    app.clipboard_countdown = if result.success { Some(result.expires_at) } else { None };
-                    app.set_msg(&result.message, if result.success { MessageType::Success } else { MessageType::Error });
+                    app.clipboard_countdown = if result.success {
+                        Some(result.expires_at)
+                    } else {
+                        None
+                    };
+                    app.set_msg(
+                        &result.message,
+                        if result.success {
+                            MessageType::Success
+                        } else {
+                            MessageType::Error
+                        },
+                    );
                 } else {
                     app.set_msg("No URL for this entry!", MessageType::Error);
                 }
@@ -139,49 +181,48 @@ fn run_app<B: ratatui::backend::Backend>(
         terminal.draw(|f| ui(f, app))?;
 
         match event::read()? {
-            Event::Mouse(mouse_event) => {
-                match mouse_event.kind {
-                    MouseEventKind::Down(MouseButton::Right) => {
-                        if app.screen == Screen::ViewPasswords
-                            || app.screen == Screen::SearchPassword
-                        {
-                            let y = mouse_event.row;
-                            let x = mouse_event.column;
-                            let header_offset = 5u16;
-                            if y > header_offset {
-                                let entry_idx = ((y - header_offset) / 7) as usize;
-                                if entry_idx < app.entry_disp.len() {
-                                    app.context_menu_visible = true;
-                                    app.context_menu_entry_idx = entry_idx;
-                                    app.context_menu_selected = 0;
-                                    app.context_menu_x = x;
-                                    app.context_menu_y = y;
-                                }
+            Event::Mouse(mouse_event) => match mouse_event.kind {
+                MouseEventKind::Down(MouseButton::Right) => {
+                    if app.screen == Screen::ViewPasswords || app.screen == Screen::SearchPassword {
+                        let y = mouse_event.row;
+                        let x = mouse_event.column;
+                        let header_offset = 6u16;
+                        let entry_start_col = 20u16;
+                        let entry_end_col = 70u16;
+
+                        if y > header_offset && x >= entry_start_col && x <= entry_end_col {
+                            let entry_idx = ((y - header_offset) / 7) as usize;
+                            if entry_idx < app.entry_disp.len() {
+                                app.context_menu_visible = true;
+                                app.context_menu_entry_idx = entry_idx;
+                                app.context_menu_selected = 0;
+                                app.context_menu_x = x;
+                                app.context_menu_y = y;
                             }
                         }
                     }
-                    MouseEventKind::Down(MouseButton::Left) => {
-                        if app.context_menu_visible {
-                            handle_context_menu_click(app, mouse_event.column, mouse_event.row);
-                        } else {
-                            app.context_menu_visible = false;
-                        }
-                    }
-                    MouseEventKind::ScrollUp => {
-                        if app.screen == Screen::ViewPasswords && app.selected_entry > 0 {
-                            app.selected_entry -= 1;
-                        }
-                    }
-                    MouseEventKind::ScrollDown => {
-                        if app.screen == Screen::ViewPasswords
-                            && app.selected_entry < app.entry_disp.len().saturating_sub(1)
-                        {
-                            app.selected_entry += 1;
-                        }
-                    }
-                    _ => {}
                 }
-            }
+                MouseEventKind::Down(MouseButton::Left) => {
+                    if app.context_menu_visible {
+                        handle_context_menu_click(app, mouse_event.column, mouse_event.row);
+                    } else {
+                        app.context_menu_visible = false;
+                    }
+                }
+                MouseEventKind::ScrollUp => {
+                    if app.screen == Screen::ViewPasswords && app.selected_entry > 0 {
+                        app.selected_entry -= 1;
+                    }
+                }
+                MouseEventKind::ScrollDown => {
+                    if app.screen == Screen::ViewPasswords
+                        && app.selected_entry < app.entry_disp.len().saturating_sub(1)
+                    {
+                        app.selected_entry += 1;
+                    }
+                }
+                _ => {}
+            },
             Event::Key(key_event) => {
                 if key_event.kind == KeyEventKind::Press {
                     if app.context_menu_visible {
