@@ -29,6 +29,7 @@ pub fn draw_view_pwds(f: &mut Frame, size: Rect, app: &App) {
         .title_alignment(Alignment::Center)
         .style(Style::default().bg(app.theme.bg0()));
     f.render_widget(block.clone(), size);
+
     let filter_status = if let Some(ref tag) = app.active_tf {
         format!(" (Filtered by: {tag})")
     } else if !app.search_query.is_empty() {
@@ -36,10 +37,23 @@ pub fn draw_view_pwds(f: &mut Frame, size: Rect, app: &App) {
     } else {
         String::new()
     };
+
+    let clipboard_status = if let Some(expires_at) = app.clipboard_countdown {
+        let now = crate::get_timestamp();
+        if expires_at > now {
+            format!(" | Clipboard clears in {}s", expires_at - now)
+        } else {
+            String::new()
+        }
+    } else {
+        String::new()
+    };
+
     let title = Paragraph::new(format!(
-        "Total: {} entries{} | Press E to edit, H for history",
+        "Total: {} entries{}{} | Right-click entry for options",
         app.entry_disp.len(),
-        filter_status
+        filter_status,
+        clipboard_status
     ))
     .style(Style::default().fg(app.theme.yellow()))
     .alignment(Alignment::Center);

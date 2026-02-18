@@ -92,12 +92,7 @@ fn handle_context_menu_click(app: &mut App, click_x: u16, click_y: u16) {
 
         match item {
             0 => {
-                eprintln!("DEBUG: Copy Password clicked - {}", entry.p);
                 let result = clipboard::copy_with_timeout(&entry.p, TIMEOUT);
-                eprintln!(
-                    "DEBUG: Result - success: {}, msg: {}",
-                    result.success, result.message
-                );
                 app.clipboard_countdown = if result.success {
                     Some(result.expires_at)
                 } else {
