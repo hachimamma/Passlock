@@ -68,6 +68,8 @@ fn handle_context_menu_click(app: &mut App, click_x: u16, click_y: u16) {
     use crate::ui::clipboard;
     use screens::MessageType;
 
+    const TIMEOUT: u64 = 30;
+
     let menu_x = app.context_menu_x;
     let menu_y = app.context_menu_y;
     let menu_width = 24u16;
@@ -87,7 +89,6 @@ fn handle_context_menu_click(app: &mut App, click_x: u16, click_y: u16) {
         }
 
         let entry = app.entry_disp[entry_idx].clone();
-        const TIMEOUT: u64 = 30;
 
         match item {
             0 => {
@@ -162,6 +163,7 @@ fn handle_context_menu_click(app: &mut App, click_x: u16, click_y: u16) {
     app.context_menu_visible = false;
 }
 
+#[allow(clippy::too_many_lines)]
 fn run_app<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
     app: &mut App,

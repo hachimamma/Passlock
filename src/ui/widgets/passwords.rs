@@ -597,7 +597,7 @@ pub fn draw_context_menu(f: &mut Frame, app: &App) {
     ];
 
     let menu_width = 24u16;
-    let menu_height = (items.len() + 2) as u16;
+    let menu_height = u16::try_from(items.len() + 2).unwrap_or(u16::MAX);
 
     let screen_width = f.size().width;
     let screen_height = f.size().height;
