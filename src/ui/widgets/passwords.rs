@@ -613,13 +613,11 @@ pub fn draw_context_menu(f: &mut Frame, app: &App) {
     let gray = app.theme.gray();
     let bg1 = app.theme.bg1();
 
-    let items = vec![
-        ("󰆒", "Copy Password"),
+    let items = [("󰆒", "Copy Password"),
         ("󰀄", "Copy Username"),
         ("󰖟", "Copy URL"),
         ("󰏫", "Edit Entry"),
-        ("󰔩", "View History"),
-    ];
+        ("󰔩", "View History")];
 
     let menu_lines: Vec<Line> = items
         .iter()
@@ -629,9 +627,7 @@ pub fn draw_context_menu(f: &mut Frame, app: &App) {
             let is_disabled = idx == 2 && !has_url;
 
             let style = if is_selected {
-                Style::default()
-                    .fg(orange)
-                    .add_modifier(Modifier::BOLD)
+                Style::default().fg(orange).add_modifier(Modifier::BOLD)
             } else if is_disabled {
                 Style::default().fg(gray)
             } else {

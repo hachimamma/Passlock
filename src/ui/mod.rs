@@ -16,8 +16,8 @@ use std::io;
 use app::App;
 use handlers::{
     handle_api, handle_cvi, handle_di, handle_epi, handle_gi, handle_help_screen, handle_mmi,
-    handle_options_menu, handle_settings_screen, handle_si, handle_tfi, handle_theme_selector,
-    handle_uvi, handle_vhi, handle_vpi,
+    handle_options_menu, handle_settings_screen, handle_si, handle_theme_selector,
+    handle_tfi, handle_uvi, handle_vhi, handle_vpi,
 };
 use screens::Screen;
 use widgets::{
@@ -64,6 +64,7 @@ pub fn run_tui() -> Result<(), Box<dyn std::error::Error>> {
 fn handle_context_menu_click(app: &mut App, click_x: u16, click_y: u16) {
     use crate::ui::clipboard;
     use screens::MessageType;
+    const TIMEOUT: u64 = 30;
 
     let menu_x = app.context_menu_x;
     let menu_y = app.context_menu_y;
@@ -84,13 +85,10 @@ fn handle_context_menu_click(app: &mut App, click_x: u16, click_y: u16) {
         }
 
         let entry = app.entry_disp[entry_idx].clone();
-        const TIMEOUT: u64 = 30;
 
         match item {
             0 => {
-                eprintln!("DEBUG: Copy Password clicked - {}", entry.p);
                 let result = clipboard::copy_with_timeout(&entry.p, TIMEOUT);
-                eprintln!("DEBUG: Result - success: {}, msg: {}", result.success, result.message);
                 app.clipboard_countdown = if result.success { Some(result.expires_at) } else { None };
                 app.set_msg(&result.message, if result.success { MessageType::Success } else { MessageType::Error });
             }
@@ -123,6 +121,7 @@ fn handle_context_menu_click(app: &mut App, click_x: u16, click_y: u16) {
     app.context_menu_visible = false;
 }
 
+#[allow(clippy::too_many_lines)]
 fn run_app<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
     app: &mut App,
@@ -152,7 +151,7 @@ fn run_app<B: ratatui::backend::Backend>(
                             let x = mouse_event.column;
                             let header_offset = 6u16;
                             
-                            if y > header_offset && x >= 5 && x <= 170 {
+                            if y > header_offset && (5..170).contains(&x) {
                                 let entry_idx = ((y - header_offset) / 7) as usize;
                                 if entry_idx < app.entry_disp.len() {
                                     app.context_menu_visible = true;
@@ -196,6 +195,10 @@ fn run_app<B: ratatui::backend::Backend>(
             Event::Key(key_event) => {
                 if key_event.kind == KeyEventKind::Press {
                     if app.context_menu_visible {
+                        use crate::ui::clipboard;
+                        use screens::MessageType;
+                        const TIMEOUT: u64 = 30;
+                        
                         match key_event.code {
                             KeyCode::Down => {
                                 if app.context_menu_selected < 4 {
@@ -215,9 +218,6 @@ fn run_app<B: ratatui::backend::Backend>(
                                 }
 
                                 let entry = app.entry_disp[entry_idx].clone();
-                                const TIMEOUT: u64 = 30;
-                                use crate::ui::clipboard;
-                                use screens::MessageType;
 
                                 match app.context_menu_selected {
                                     0 => {
@@ -249,9 +249,6 @@ fn run_app<B: ratatui::backend::Backend>(
                                     }
                                     _ => {}
                                 }
-                                app.context_menu_visible = false;
-                            }
-                            KeyCode::Esc => {
                                 app.context_menu_visible = false;
                             }
                             _ => {

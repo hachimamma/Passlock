@@ -62,7 +62,7 @@ pub fn copy_with_timeout(text: &str, timeout_secs: u64) -> ClipboardResult {
                             let _ = Command::new("pkill").arg("wl-copy").status();
 
                             thread::sleep(Duration::from_millis(200));
-                            
+
                             let _ = Command::new("cliphist").arg("wipe").status();
                             let _ = Command::new("copyq").arg("clear").status();
                             let _ = Command::new("clipman").arg("clear").arg("--all").status();
