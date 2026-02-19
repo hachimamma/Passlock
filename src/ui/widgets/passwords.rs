@@ -588,89 +588,71 @@ pub fn draw_del_pwd(f: &mut Frame, size: Rect, app: &App) {
 }
 
 pub fn draw_context_menu(f: &mut Frame, app: &App) {
-    use super::super::colors::ThemeColors;
+    let menu_width = 24u16;
+    let menu_height = 7u16;
+    let x = app.context_menu_x;
+    let y = app.context_menu_y;
 
-    if !app.context_menu_visible {
-        return;
-    }
-
-    let entry = if app.context_menu_entry_idx < app.entry_disp.len() {
-        &app.entry_disp[app.context_menu_entry_idx]
-    } else {
-        return;
+    let area = Rect {
+        x,
+        y,
+        width: menu_width,
+        height: menu_height,
     };
 
-    let has_url = entry.url.is_some();
+    let entry_idx = app.context_menu_entry_idx;
+    let has_url = if entry_idx < app.entry_disp.len() {
+        app.entry_disp[entry_idx].url.is_some()
+    } else {
+        false
+    };
 
-    let items = [
-        ("󰆒", "Copy Password", true),
-        ("󰀄", "Copy Username", true),
-        ("󰖟", "Copy URL", has_url),
-        ("󰏫", "Edit Entry", true),
-        ("󰔩", "View History", true),
+    let selected = app.context_menu_selected;
+    let orange = app.theme.orange();
+    let fg = app.theme.fg();
+    let gray = app.theme.gray();
+    let bg1 = app.theme.bg1();
+
+    let items = vec![
+        ("󰆒", "Copy Password"),
+        ("󰀄", "Copy Username"),
+        ("󰖟", "Copy URL"),
+        ("󰏫", "Edit Entry"),
+        ("󰔩", "View History"),
     ];
 
-    let menu_width = 24u16;
-    let menu_height = u16::try_from(items.len() + 2).unwrap_or(u16::MAX);
-
-    let screen_width = f.size().width;
-    let screen_height = f.size().height;
-
-    let menu_x = if app.context_menu_x + menu_width > screen_width {
-        screen_width.saturating_sub(menu_width)
-    } else {
-        app.context_menu_x
-    };
-
-    let menu_y = if app.context_menu_y + menu_height > screen_height {
-        screen_height.saturating_sub(menu_height)
-    } else {
-        app.context_menu_y
-    };
-
-    let area = Rect::new(menu_x, menu_y, menu_width, menu_height);
-
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .border_style(
-            Style::default()
-                .fg(app.theme.orange())
-                .add_modifier(Modifier::BOLD),
-        )
-        .style(Style::default().bg(app.theme.bg1()));
-
-    let inner = block.inner(area);
-    f.render_widget(block, area);
-
-    let list_items: Vec<ListItem> = items
+    let menu_lines: Vec<Line> = items
         .iter()
         .enumerate()
-        .map(|(i, (icon, label, enabled))| {
-            let style = if !enabled {
-                Style::default().fg(app.theme.gray())
-            } else if i == app.context_menu_selected {
+        .map(|(idx, (icon, label))| {
+            let is_selected = idx == selected;
+            let is_disabled = idx == 2 && !has_url;
+
+            let style = if is_selected {
                 Style::default()
-                    .fg(app.theme.yellow())
+                    .fg(orange)
                     .add_modifier(Modifier::BOLD)
-                    .bg(app.theme.bg0())
+            } else if is_disabled {
+                Style::default().fg(gray)
             } else {
-                Style::default().fg(app.theme.fg())
+                Style::default().fg(fg)
             };
 
-            ListItem::new(Line::from(vec![
-                Span::styled(
-                    format!(" {icon} "),
-                    Style::default().fg(if *enabled {
-                        app.theme.orange()
-                    } else {
-                        app.theme.gray()
-                    }),
-                ),
+            Line::from(vec![
+                Span::raw(" "),
+                Span::styled(*icon, style),
+                Span::raw(" "),
                 Span::styled(*label, style),
-            ]))
+            ])
         })
         .collect();
 
-    let list = List::new(list_items);
-    f.render_widget(list, inner);
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(orange))
+        .style(Style::default().bg(bg1));
+
+    let paragraph = Paragraph::new(menu_lines).block(block);
+
+    f.render_widget(paragraph, area);
 }

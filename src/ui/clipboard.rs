@@ -59,12 +59,10 @@ pub fn copy_with_timeout(text: &str, timeout_secs: u64) -> ClipboardResult {
                                 }
                             }
 
-                            // Kill wl-copy process (clears Wayland clipboard)
                             let _ = Command::new("pkill").arg("wl-copy").status();
 
                             thread::sleep(Duration::from_millis(200));
-
-                            // Try clearing common clipboard managers
+                            
                             let _ = Command::new("cliphist").arg("wipe").status();
                             let _ = Command::new("copyq").arg("clear").status();
                             let _ = Command::new("clipman").arg("clear").arg("--all").status();
