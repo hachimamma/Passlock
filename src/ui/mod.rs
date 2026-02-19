@@ -6,7 +6,10 @@ pub mod screens;
 pub mod widgets;
 
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind, MouseButton, MouseEventKind},
+    event::{
+        self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind, MouseButton,
+        MouseEventKind,
+    },
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -90,20 +93,56 @@ fn handle_context_menu_click(app: &mut App, click_x: u16, click_y: u16) {
             0 => {
                 eprintln!("DEBUG: Copy Password clicked - {}", entry.p);
                 let result = clipboard::copy_with_timeout(&entry.p, TIMEOUT);
-                eprintln!("DEBUG: Result - success: {}, msg: {}", result.success, result.message);
-                app.clipboard_countdown = if result.success { Some(result.expires_at) } else { None };
-                app.set_msg(&result.message, if result.success { MessageType::Success } else { MessageType::Error });
+                eprintln!(
+                    "DEBUG: Result - success: {}, msg: {}",
+                    result.success, result.message
+                );
+                app.clipboard_countdown = if result.success {
+                    Some(result.expires_at)
+                } else {
+                    None
+                };
+                app.set_msg(
+                    &result.message,
+                    if result.success {
+                        MessageType::Success
+                    } else {
+                        MessageType::Error
+                    },
+                );
             }
             1 => {
                 let result = clipboard::copy_with_timeout(&entry.u, TIMEOUT);
-                app.clipboard_countdown = if result.success { Some(result.expires_at) } else { None };
-                app.set_msg(&result.message, if result.success { MessageType::Success } else { MessageType::Error });
+                app.clipboard_countdown = if result.success {
+                    Some(result.expires_at)
+                } else {
+                    None
+                };
+                app.set_msg(
+                    &result.message,
+                    if result.success {
+                        MessageType::Success
+                    } else {
+                        MessageType::Error
+                    },
+                );
             }
             2 => {
                 if let Some(ref url) = entry.url {
                     let result = clipboard::copy_with_timeout(url, TIMEOUT);
-                    app.clipboard_countdown = if result.success { Some(result.expires_at) } else { None };
-                    app.set_msg(&result.message, if result.success { MessageType::Success } else { MessageType::Error });
+                    app.clipboard_countdown = if result.success {
+                        Some(result.expires_at)
+                    } else {
+                        None
+                    };
+                    app.set_msg(
+                        &result.message,
+                        if result.success {
+                            MessageType::Success
+                        } else {
+                            MessageType::Error
+                        },
+                    );
                 } else {
                     app.set_msg("No URL for this entry!", MessageType::Error);
                 }
@@ -123,6 +162,7 @@ fn handle_context_menu_click(app: &mut App, click_x: u16, click_y: u16) {
     app.context_menu_visible = false;
 }
 
+#[allow(clippy::too_many_lines)]
 fn run_app<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
     app: &mut App,
@@ -151,30 +191,30 @@ fn run_app<B: ratatui::backend::Backend>(
                             let y = mouse_event.row;
                             let x = mouse_event.column;
                             let header_offset = 6u16;
-                            
+
                             // Much larger clickable area - nearly full row width
-                            if y > header_offset && x >= 5 && x <= 170 {
+                            if y > header_offset && (5..=170).contains(&x) {
                                 // Calculate which entry was clicked based on cumulative heights
                                 // Each entry has variable height: 5 rows (with URL) or 4 rows (without URL) + 1 blank
                                 let mut current_row = header_offset + 1; // First entry starts at row 7
                                 let mut found_idx = None;
-                                
+
                                 for (idx, entry) in app.entry_disp.iter().enumerate() {
                                     let entry_height = if entry.url.is_some() { 6 } else { 5 }; // 5 or 4 content rows + 1 blank
-                                    
+
                                     if y >= current_row && y < current_row + entry_height {
                                         found_idx = Some(idx);
                                         break;
                                     }
-                                    
+
                                     current_row += entry_height;
                                 }
-                                
+
                                 if let Some(entry_idx) = found_idx {
                                     app.context_menu_visible = true;
                                     app.context_menu_entry_idx = entry_idx;
                                     app.context_menu_selected = 0;
-                                    
+
                                     // Position menu near mouse but keep on screen
                                     let term_width = 174u16;
                                     let menu_width = 24u16;
@@ -216,7 +256,7 @@ fn run_app<B: ratatui::backend::Backend>(
                         use crate::ui::clipboard;
                         use screens::MessageType;
                         const TIMEOUT: u64 = 30;
-                        
+
                         match key_event.code {
                             KeyCode::Down => {
                                 // Navigate down in menu (5 items: 0-4)
@@ -242,22 +282,60 @@ fn run_app<B: ratatui::backend::Backend>(
 
                                 match app.context_menu_selected {
                                     0 => {
-                                        let result = clipboard::copy_with_timeout(&entry.p, TIMEOUT);
-                                        app.clipboard_countdown = if result.success { Some(result.expires_at) } else { None };
-                                        app.set_msg(&result.message, if result.success { MessageType::Success } else { MessageType::Error });
+                                        let result =
+                                            clipboard::copy_with_timeout(&entry.p, TIMEOUT);
+                                        app.clipboard_countdown = if result.success {
+                                            Some(result.expires_at)
+                                        } else {
+                                            None
+                                        };
+                                        app.set_msg(
+                                            &result.message,
+                                            if result.success {
+                                                MessageType::Success
+                                            } else {
+                                                MessageType::Error
+                                            },
+                                        );
                                     }
                                     1 => {
-                                        let result = clipboard::copy_with_timeout(&entry.u, TIMEOUT);
-                                        app.clipboard_countdown = if result.success { Some(result.expires_at) } else { None };
-                                        app.set_msg(&result.message, if result.success { MessageType::Success } else { MessageType::Error });
+                                        let result =
+                                            clipboard::copy_with_timeout(&entry.u, TIMEOUT);
+                                        app.clipboard_countdown = if result.success {
+                                            Some(result.expires_at)
+                                        } else {
+                                            None
+                                        };
+                                        app.set_msg(
+                                            &result.message,
+                                            if result.success {
+                                                MessageType::Success
+                                            } else {
+                                                MessageType::Error
+                                            },
+                                        );
                                     }
                                     2 => {
                                         if let Some(ref url) = entry.url {
                                             let result = clipboard::copy_with_timeout(url, TIMEOUT);
-                                            app.clipboard_countdown = if result.success { Some(result.expires_at) } else { None };
-                                            app.set_msg(&result.message, if result.success { MessageType::Success } else { MessageType::Error });
+                                            app.clipboard_countdown = if result.success {
+                                                Some(result.expires_at)
+                                            } else {
+                                                None
+                                            };
+                                            app.set_msg(
+                                                &result.message,
+                                                if result.success {
+                                                    MessageType::Success
+                                                } else {
+                                                    MessageType::Error
+                                                },
+                                            );
                                         } else {
-                                            app.set_msg("No URL for this entry!", MessageType::Error);
+                                            app.set_msg(
+                                                "No URL for this entry!",
+                                                MessageType::Error,
+                                            );
                                         }
                                     }
                                     3 => {
