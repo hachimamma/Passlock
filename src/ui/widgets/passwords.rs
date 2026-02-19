@@ -613,11 +613,13 @@ pub fn draw_context_menu(f: &mut Frame, app: &App) {
     let gray = app.theme.gray();
     let bg1 = app.theme.bg1();
 
-    let items = [("󰆒", "Copy Password"),
+    let items = [
+        ("󰆒", "Copy Password"),
         ("󰀄", "Copy Username"),
         ("󰖟", "Copy URL"),
         ("󰏫", "Edit Entry"),
-        ("󰔩", "View History")];
+        ("󰔩", "View History"),
+    ];
 
     let menu_lines: Vec<Line> = items
         .iter()
