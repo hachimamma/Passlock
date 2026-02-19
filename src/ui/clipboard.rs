@@ -34,7 +34,7 @@ pub fn copy_with_timeout(text: &str, timeout_secs: u64) -> ClipboardResult {
                 if let Err(e) = stdin.write_all(text.as_bytes()) {
                     return ClipboardResult {
                         success: false,
-                        message: format!("Write error: {}", e),
+                        message: format!("Write error: {e}"),
                         expires_at: 0,
                     };
                 }
@@ -75,21 +75,21 @@ pub fn copy_with_timeout(text: &str, timeout_secs: u64) -> ClipboardResult {
                         let expires_at = crate::get_timestamp() + timeout_secs;
                         return ClipboardResult {
                             success: true,
-                            message: format!("Copied! Clears in {}s", timeout_secs),
+                            message: format!("Copied! Clears in {timeout_secs}s"),
                             expires_at,
                         };
                     }
                     Ok(status) => {
                         return ClipboardResult {
                             success: false,
-                            message: format!("wl-copy failed: {}", status),
+                            message: format!("wl-copy failed: {status}"),
                             expires_at: 0,
                         };
                     }
                     Err(e) => {
                         return ClipboardResult {
                             success: false,
-                            message: format!("Process error: {}", e),
+                            message: format!("Process error: {e}"),
                             expires_at: 0,
                         };
                     }
