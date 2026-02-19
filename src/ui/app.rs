@@ -39,6 +39,13 @@ pub struct App {
     pub theme_selector_index: usize,
     pub options_menu_index: usize,
     pub settings_menu_index: usize,
+    pub context_menu_visible: bool,
+    pub context_menu_entry_idx: usize,
+    pub context_menu_selected: usize,
+    pub context_menu_x: u16,
+    pub context_menu_y: u16,
+    pub clipboard_msg: Option<String>,
+    pub clipboard_countdown: Option<u64>,
 }
 
 impl App {
@@ -76,6 +83,13 @@ impl App {
             theme_selector_index: 0,
             options_menu_index: 0,
             settings_menu_index: 0,
+            context_menu_visible: false,
+            context_menu_entry_idx: 0,
+            context_menu_selected: 0,
+            context_menu_x: 0,
+            context_menu_y: 0,
+            clipboard_msg: None,
+            clipboard_countdown: None,
         }
     }
 

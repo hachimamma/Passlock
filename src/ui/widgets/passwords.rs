@@ -29,6 +29,7 @@ pub fn draw_view_pwds(f: &mut Frame, size: Rect, app: &App) {
         .title_alignment(Alignment::Center)
         .style(Style::default().bg(app.theme.bg0()));
     f.render_widget(block.clone(), size);
+
     let filter_status = if let Some(ref tag) = app.active_tf {
         format!(" (Filtered by: {tag})")
     } else if !app.search_query.is_empty() {
@@ -36,10 +37,23 @@ pub fn draw_view_pwds(f: &mut Frame, size: Rect, app: &App) {
     } else {
         String::new()
     };
+
+    let clipboard_status = if let Some(expires_at) = app.clipboard_countdown {
+        let now = crate::get_timestamp();
+        if expires_at > now {
+            format!(" | Clipboard clears in {}s", expires_at - now)
+        } else {
+            String::new()
+        }
+    } else {
+        String::new()
+    };
+
     let title = Paragraph::new(format!(
-        "Total: {} entries{} | Press E to edit, H for history",
+        "Total: {} entries{}{} | Right-click entry for options",
         app.entry_disp.len(),
-        filter_status
+        filter_status,
+        clipboard_status
     ))
     .style(Style::default().fg(app.theme.yellow()))
     .alignment(Alignment::Center);
@@ -571,4 +585,72 @@ pub fn draw_del_pwd(f: &mut Frame, size: Rect, app: &App) {
         .style(Style::default().fg(app.theme.gray()))
         .alignment(Alignment::Center);
     f.render_widget(help, chunks[3]);
+}
+
+pub fn draw_context_menu(f: &mut Frame, app: &App) {
+    let menu_width = 24u16;
+    let menu_height = 7u16;
+    let x = app.context_menu_x;
+    let y = app.context_menu_y;
+
+    let area = Rect {
+        x,
+        y,
+        width: menu_width,
+        height: menu_height,
+    };
+
+    let entry_idx = app.context_menu_entry_idx;
+    let has_url = if entry_idx < app.entry_disp.len() {
+        app.entry_disp[entry_idx].url.is_some()
+    } else {
+        false
+    };
+
+    let selected = app.context_menu_selected;
+    let orange = app.theme.orange();
+    let fg = app.theme.fg();
+    let gray = app.theme.gray();
+    let bg1 = app.theme.bg1();
+
+    let items = [
+        ("󰆒", "Copy Password"),
+        ("󰀄", "Copy Username"),
+        ("󰖟", "Copy URL"),
+        ("󰏫", "Edit Entry"),
+        ("󰔩", "View History"),
+    ];
+
+    let menu_lines: Vec<Line> = items
+        .iter()
+        .enumerate()
+        .map(|(idx, (icon, label))| {
+            let is_selected = idx == selected;
+            let is_disabled = idx == 2 && !has_url;
+
+            let style = if is_selected {
+                Style::default().fg(orange).add_modifier(Modifier::BOLD)
+            } else if is_disabled {
+                Style::default().fg(gray)
+            } else {
+                Style::default().fg(fg)
+            };
+
+            Line::from(vec![
+                Span::raw(" "),
+                Span::styled(*icon, style),
+                Span::raw(" "),
+                Span::styled(*label, style),
+            ])
+        })
+        .collect();
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(orange))
+        .style(Style::default().bg(bg1));
+
+    let paragraph = Paragraph::new(menu_lines).block(block);
+
+    f.render_widget(paragraph, area);
 }
