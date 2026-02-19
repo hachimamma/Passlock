@@ -1,5 +1,6 @@
 use std::io::Write;
-use std::process::{Command, Stdio};
+use std::process::Command;
+use std::process::Stdio;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -33,7 +34,7 @@ pub fn copy_with_timeout(text: &str, timeout_secs: u64) -> ClipboardResult {
                 if let Err(e) = stdin.write_all(text.as_bytes()) {
                     return ClipboardResult {
                         success: false,
-                        message: format!("Write error: {e}"),
+                        message: format!("Write error: {}", e),
                         expires_at: 0,
                     };
                 }
@@ -41,11 +42,6 @@ pub fn copy_with_timeout(text: &str, timeout_secs: u64) -> ClipboardResult {
 
                 match child.wait() {
                     Ok(status) if status.success() => {
-                        let verify = Command::new("wl-paste").output();
-                        if let Ok(output) = verify {
-                            let _pasted = String::from_utf8_lossy(&output.stdout);
-                        }
-
                         let flag = get_flag();
                         if let Ok(mut f) = flag.lock() {
                             *f = false;
@@ -54,11 +50,8 @@ pub fn copy_with_timeout(text: &str, timeout_secs: u64) -> ClipboardResult {
                         let flag_clone = flag.clone();
 
                         thread::spawn(move || {
-                            let sleep_interval = Duration::from_millis(500);
-                            let steps = (timeout_secs * 1000) / 500;
-
-                            for _ in 0..steps {
-                                thread::sleep(sleep_interval);
+                            for _i in 0..timeout_secs {
+                                thread::sleep(Duration::from_secs(1));
                                 if let Ok(f) = flag_clone.lock() {
                                     if *f {
                                         return;
@@ -66,27 +59,37 @@ pub fn copy_with_timeout(text: &str, timeout_secs: u64) -> ClipboardResult {
                                 }
                             }
 
-                            let _ = Command::new("wl-copy").arg("--clear").output();
+                            // Kill wl-copy process (clears Wayland clipboard)
+                            let _ = Command::new("pkill").arg("wl-copy").status();
+
+                            thread::sleep(Duration::from_millis(200));
+
+                            // Try clearing common clipboard managers
+                            let _ = Command::new("cliphist").arg("wipe").status();
+                            let _ = Command::new("copyq").arg("clear").status();
+                            let _ = Command::new("clipman").arg("clear").arg("--all").status();
+                            let _ = Command::new("pkill").arg("wl-clip-persist").status();
+                            let _ = Command::new("clipster").arg("-d").status();
                         });
 
                         let expires_at = crate::get_timestamp() + timeout_secs;
                         return ClipboardResult {
                             success: true,
-                            message: format!("Copied! Clears in {timeout_secs}s"),
+                            message: format!("Copied! Clears in {}s", timeout_secs),
                             expires_at,
                         };
                     }
                     Ok(status) => {
                         return ClipboardResult {
                             success: false,
-                            message: format!("wl-copy exit: {status}"),
+                            message: format!("wl-copy failed: {}", status),
                             expires_at: 0,
                         };
                     }
                     Err(e) => {
                         return ClipboardResult {
                             success: false,
-                            message: format!("Process error: {e}"),
+                            message: format!("Process error: {}", e),
                             expires_at: 0,
                         };
                     }
@@ -111,5 +114,5 @@ pub fn copy_with_timeout(text: &str, timeout_secs: u64) -> ClipboardResult {
 
 #[allow(dead_code)]
 pub fn clear_clipboard() {
-    let _ = Command::new("wl-copy").arg("--clear").output();
+    let _ = Command::new("pkill").arg("wl-copy").status();
 }
