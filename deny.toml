@@ -9,6 +9,7 @@ allow = [
     "Zlib",
     "BSD-2-Clause",
     "Unicode-3.0",
+    "BSL-1.0"
 ]
 unused-allowed-license = "warn"
 
