@@ -91,12 +91,8 @@ fn handle_context_menu_click(app: &mut App, click_x: u16, click_y: u16) {
 
         match item {
             0 => {
-                eprintln!("DEBUG: Copy Password clicked - {}", entry.p);
                 let result = clipboard::copy_with_timeout(&entry.p, TIMEOUT);
-                eprintln!(
-                    "DEBUG: Result - success: {}, msg: {}",
-                    result.success, result.message
-                );
+
                 app.clipboard_countdown = if result.success {
                     Some(result.expires_at)
                 } else {
@@ -182,40 +178,24 @@ fn run_app<B: ratatui::backend::Backend>(
         terminal.draw(|f| ui(f, app))?;
 
         match event::read()? {
-            Event::Mouse(mouse_event) => {
-                match mouse_event.kind {
-                    MouseEventKind::Down(MouseButton::Right) => {
-                        if app.screen == Screen::ViewPasswords
-                            || app.screen == Screen::SearchPassword
-                        {
-                            let y = mouse_event.row;
-                            let x = mouse_event.column;
-                            let header_offset = 6u16;
+            Event::Mouse(mouse_event) => match mouse_event.kind {
+                MouseEventKind::Down(MouseButton::Right) => {
+                    if app.screen == Screen::ViewPasswords || app.screen == Screen::SearchPassword {
+                        let y = mouse_event.row;
+                        let x = mouse_event.column;
 
-                            // Much larger clickable area - nearly full row width
-                            if y > header_offset && (5..=170).contains(&x) {
-                                // Calculate which entry was clicked based on cumulative heights
-                                // Each entry has variable height: 5 rows (with URL) or 4 rows (without URL) + 1 blank
-                                let mut current_row = header_offset + 1; // First entry starts at row 7
-                                let mut found_idx = None;
+                        if (5..=170).contains(&x) && y >= 5 {
+                            let relative_y = y - 5;
+                            let block = relative_y / 6;
+                            let offset = relative_y % 6;
 
-                                for (idx, entry) in app.entry_disp.iter().enumerate() {
-                                    let entry_height = if entry.url.is_some() { 6 } else { 5 }; // 5 or 4 content rows + 1 blank
-
-                                    if y >= current_row && y < current_row + entry_height {
-                                        found_idx = Some(idx);
-                                        break;
-                                    }
-
-                                    current_row += entry_height;
-                                }
-
-                                if let Some(entry_idx) = found_idx {
+                            if offset < 4 {
+                                let entry_idx = block as usize;
+                                if entry_idx < app.entry_disp.len() {
                                     app.context_menu_visible = true;
                                     app.context_menu_entry_idx = entry_idx;
                                     app.context_menu_selected = 0;
 
-                                    // Position menu near mouse but keep on screen
                                     let term_width = 174u16;
                                     let menu_width = 24u16;
                                     app.context_menu_x = if x + menu_width > term_width {
@@ -228,28 +208,28 @@ fn run_app<B: ratatui::backend::Backend>(
                             }
                         }
                     }
-                    MouseEventKind::Down(MouseButton::Left) => {
-                        if app.context_menu_visible {
-                            handle_context_menu_click(app, mouse_event.column, mouse_event.row);
-                        } else {
-                            app.context_menu_visible = false;
-                        }
-                    }
-                    MouseEventKind::ScrollUp => {
-                        if app.screen == Screen::ViewPasswords && app.selected_entry > 0 {
-                            app.selected_entry -= 1;
-                        }
-                    }
-                    MouseEventKind::ScrollDown => {
-                        if app.screen == Screen::ViewPasswords
-                            && app.selected_entry < app.entry_disp.len().saturating_sub(1)
-                        {
-                            app.selected_entry += 1;
-                        }
-                    }
-                    _ => {}
                 }
-            }
+                MouseEventKind::Down(MouseButton::Left) => {
+                    if app.context_menu_visible {
+                        handle_context_menu_click(app, mouse_event.column, mouse_event.row);
+                    } else {
+                        app.context_menu_visible = false;
+                    }
+                }
+                MouseEventKind::ScrollUp => {
+                    if app.screen == Screen::ViewPasswords && app.selected_entry > 0 {
+                        app.selected_entry -= 1;
+                    }
+                }
+                MouseEventKind::ScrollDown => {
+                    if app.screen == Screen::ViewPasswords
+                        && app.selected_entry < app.entry_disp.len().saturating_sub(1)
+                    {
+                        app.selected_entry += 1;
+                    }
+                }
+                _ => {}
+            },
             Event::Key(key_event) => {
                 if key_event.kind == KeyEventKind::Press {
                     if app.context_menu_visible {
