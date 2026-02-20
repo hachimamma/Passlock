@@ -239,19 +239,16 @@ fn run_app<B: ratatui::backend::Backend>(
 
                         match key_event.code {
                             KeyCode::Down => {
-                                // Navigate down in menu (5 items: 0-4)
                                 if app.context_menu_selected < 4 {
                                     app.context_menu_selected += 1;
                                 }
                             }
                             KeyCode::Up => {
-                                // Navigate up in menu
                                 if app.context_menu_selected > 0 {
                                     app.context_menu_selected -= 1;
                                 }
                             }
                             KeyCode::Enter => {
-                                // Execute selected menu item
                                 let entry_idx = app.context_menu_entry_idx;
                                 if entry_idx >= app.entry_disp.len() {
                                     app.context_menu_visible = false;
@@ -331,7 +328,6 @@ fn run_app<B: ratatui::backend::Backend>(
                                 app.context_menu_visible = false;
                             }
                             _ => {
-                                // Any key (including Esc) closes menu
                                 app.context_menu_visible = false;
                             }
                         }
