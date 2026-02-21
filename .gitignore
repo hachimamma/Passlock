@@ -3,6 +3,7 @@
 **/*.rs.bk
 *.pdb
 /src/ui.rs.backup
+/bin/
 
 # C
 *.o

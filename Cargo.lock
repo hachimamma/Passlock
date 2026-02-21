@@ -615,7 +615,7 @@ dependencies = [
 
 [[package]]
 name = "passlock"
-version = "2.2.3"
+version = "2.3.4"
 dependencies = [
  "arboard",
  "base32",
