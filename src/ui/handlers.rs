@@ -239,7 +239,8 @@ pub fn handle_api(app: &mut App, key: KeyCode) {
             1 => app.n_entry_user.push(c),
             2 => app.n_entry_pass.push(c),
             3 => app.n_entry_url.push(c),
-            4 => {
+            4 => app.n_entry_totp.push(c),
+            5 => {
                 if !c.is_ascii_digit() {
                     app.tag_input.push(c);
                 } else if let Some(digit) = c.to_digit(10) {
@@ -247,7 +248,7 @@ pub fn handle_api(app: &mut App, key: KeyCode) {
                     app.remove_tag(idx);
                 }
             }
-            5 => app.n_entry_notes.push(c),
+            6 => app.n_entry_notes.push(c),
             _ => {}
         },
         KeyCode::Backspace => match app.add_fi {
@@ -264,27 +265,30 @@ pub fn handle_api(app: &mut App, key: KeyCode) {
                 app.n_entry_url.pop();
             }
             4 => {
+                app.n_entry_totp.pop();
+            }
+            5 => {
                 if app.tag_input.is_empty() && !app.n_entry_tags.is_empty() {
                     app.n_entry_tags.pop();
                 } else {
                     app.tag_input.pop();
                 }
             }
-            5 => {
+            6 => {
                 app.n_entry_notes.pop();
             }
             _ => {}
         },
         KeyCode::Tab => {
-            app.add_fi = (app.add_fi + 1) % 6;
+            app.add_fi = (app.add_fi + 1) % 7;
         }
         KeyCode::BackTab => {
-            app.add_fi = if app.add_fi == 0 { 5 } else { app.add_fi - 1 };
+            app.add_fi = if app.add_fi == 0 { 6 } else { app.add_fi - 1 };
         }
         KeyCode::Enter => {
-            if app.add_fi == 4 {
+            if app.add_fi == 5 {
                 app.add_tag();
-            } else if app.add_fi == 5 {
+            } else if app.add_fi == 6 {
                 app.n_entry_notes.push('\n');
             } else {
                 app.add_entry();
@@ -305,7 +309,8 @@ pub fn handle_epi(app: &mut App, key: KeyCode) {
             1 => app.n_entry_user.push(c),
             2 => app.n_entry_pass.push(c),
             3 => app.n_entry_url.push(c),
-            4 => {
+            4 => app.n_entry_totp.push(c),
+            5 => {
                 if !c.is_ascii_digit() {
                     app.tag_input.push(c);
                 } else if let Some(digit) = c.to_digit(10) {
@@ -313,7 +318,7 @@ pub fn handle_epi(app: &mut App, key: KeyCode) {
                     app.remove_tag(idx);
                 }
             }
-            5 => app.n_entry_notes.push(c),
+            6 => app.n_entry_notes.push(c),
             _ => {}
         },
         KeyCode::Backspace => match app.add_fi {
@@ -330,27 +335,30 @@ pub fn handle_epi(app: &mut App, key: KeyCode) {
                 app.n_entry_url.pop();
             }
             4 => {
+                app.n_entry_totp.pop();
+            }
+            5 => {
                 if app.tag_input.is_empty() && !app.n_entry_tags.is_empty() {
                     app.n_entry_tags.pop();
                 } else {
                     app.tag_input.pop();
                 }
             }
-            5 => {
+            6 => {
                 app.n_entry_notes.pop();
             }
             _ => {}
         },
         KeyCode::Tab => {
-            app.add_fi = (app.add_fi + 1) % 6;
+            app.add_fi = (app.add_fi + 1) % 7;
         }
         KeyCode::BackTab => {
-            app.add_fi = if app.add_fi == 0 { 5 } else { app.add_fi - 1 };
+            app.add_fi = if app.add_fi == 0 { 6 } else { app.add_fi - 1 };
         }
         KeyCode::Enter => {
-            if app.add_fi == 4 {
+            if app.add_fi == 5 {
                 app.add_tag();
-            } else if app.add_fi == 5 {
+            } else if app.add_fi == 6 {
                 app.n_entry_notes.push('\n');
             } else {
                 app.edit_entry();
