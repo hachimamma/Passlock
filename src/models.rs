@@ -25,6 +25,7 @@ pub struct Entry {
     pub history: Vec<PasswordHistory>,
     #[serde(default)]
     pub last_modified: u64,
+    pub totp_secret: Option<String>, // shush
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

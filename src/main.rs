@@ -1,6 +1,7 @@
 mod crypto;
 mod models;
 mod storage;
+mod totp;
 mod ui;
 mod vault_ffi;
 
