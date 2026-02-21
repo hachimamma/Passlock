@@ -2,17 +2,14 @@ use totp_lite::{totp_custom, Sha1};
 
 /// Generate a 6-digit TOTP code from a base32-encoded secret
 pub fn generate_totp(secret: &str) -> Result<String, String> {
-    // Decode base32 secret
     let secret_bytes = base32::decode(base32::Alphabet::RFC4648 { padding: false }, secret)
         .ok_or_else(|| "Invalid base32 secret".to_string())?;
 
-    // Get current Unix timestamp
     let seconds = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_err(|e| format!("Time error: {e}"))?
         .as_secs();
 
-    // Generate TOTP (6 digits, 30 second window)
     let code = totp_custom::<Sha1>(30, 6, &secret_bytes, seconds);
 
     Ok(format!("{code:06}"))
@@ -48,8 +45,7 @@ mod tests {
 
     #[test]
     fn test_totp_generation() {
-        // RFC 6238 test vector
-        let secret = "JBSWY3DPEHPK3PXP"; // "Hello!" in base32
+        let secret = "JBSWY3DPEHPK3PXP"; // this is Hello! in base32
         let result = generate_totp(secret);
         assert!(result.is_ok());
         let code = result.unwrap();
