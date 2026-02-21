@@ -462,7 +462,7 @@ pub fn draw_options_menu(f: &mut Frame, area: Rect, app: &App) {
                 .add_modifier(Modifier::BOLD),
         )]),
         Line::from(vec![Span::styled(
-            "           v2.2.3",
+            "           v2.3.4",
             Style::default().fg(app.theme.gray()),
         )]),
     ];
