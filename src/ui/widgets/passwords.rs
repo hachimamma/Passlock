@@ -58,6 +58,7 @@ pub fn draw_view_pwds(f: &mut Frame, size: Rect, app: &App) {
     .style(Style::default().fg(app.theme.yellow()))
     .alignment(Alignment::Center);
     f.render_widget(title, chunks[0]);
+
     if app.entry_disp.is_empty() {
         let empty = if app.active_tf.is_some() || !app.search_query.is_empty() {
             "[ No matching entries found ]"
@@ -110,6 +111,7 @@ pub fn draw_view_pwds(f: &mut Frame, size: Rect, app: &App) {
                         Span::styled(&entry.p, Style::default().fg(app.theme.green())),
                     ]),
                 ];
+
                 if let Some(ref url) = entry.url {
                     lines.push(Line::from(vec![
                         Span::raw("     "),
@@ -117,6 +119,47 @@ pub fn draw_view_pwds(f: &mut Frame, size: Rect, app: &App) {
                         Span::styled(url, Style::default().fg(app.theme.aqua())),
                     ]));
                 }
+
+                if let Some(ref totp_secret) = entry.totp_secret {
+                    if app.show_totp_codes {
+                        if let Ok(code) = crate::totp::generate_totp(totp_secret) {
+                            let formatted_code = crate::totp::format_totp_code(&code);
+                            let remaining = crate::totp::get_totp_remaining_seconds();
+
+                            let totp_line = Line::from(vec![
+                                Span::raw("     "),
+                                Span::styled("├─ 2FA:  ", Style::default().fg(app.theme.gray())),
+                                Span::styled(
+                                    formatted_code,
+                                    Style::default()
+                                        .fg(app.theme.green())
+                                        .add_modifier(Modifier::BOLD),
+                                ),
+                                Span::raw("  "),
+                                Span::styled(
+                                    format!("({remaining}s)"),
+                                    if remaining < 10 {
+                                        Style::default().fg(app.theme.red())
+                                    } else {
+                                        Style::default().fg(app.theme.gray())
+                                    },
+                                ),
+                            ]);
+                            lines.push(totp_line);
+                        } else {
+                            let error_line = Line::from(vec![
+                                Span::raw("     "),
+                                Span::styled("├─ 2FA:  ", Style::default().fg(app.theme.gray())),
+                                Span::styled(
+                                    "⚠ Invalid secret",
+                                    Style::default().fg(app.theme.red()),
+                                ),
+                            ]);
+                            lines.push(error_line);
+                        }
+                    }
+                }
+
                 if !entry.history.is_empty() {
                     lines.push(Line::from(vec![
                         Span::raw("     "),
@@ -126,6 +169,7 @@ pub fn draw_view_pwds(f: &mut Frame, size: Rect, app: &App) {
                         ),
                     ]));
                 }
+
                 if entry.tags.is_empty() {
                     lines.push(Line::from(vec![
                         Span::raw("     "),
@@ -161,19 +205,20 @@ pub fn draw_add_pwd(f: &mut Frame, size: Rect, app: &App) {
         .direction(Direction::Vertical)
         .margin(2)
         .constraints([
-            Constraint::Length(2),
-            Constraint::Length(1),
-            Constraint::Length(2),
-            Constraint::Length(2),
-            Constraint::Length(2),
-            Constraint::Length(2),
-            Constraint::Length(2),
-            Constraint::Length(2),
-            Constraint::Length(2),
-            Constraint::Length(3),
-            Constraint::Length(4),
-            Constraint::Min(1),
-            Constraint::Length(2),
+            Constraint::Length(2), // 0: title
+            Constraint::Length(1), // 1: spacer
+            Constraint::Length(2), // 2: name
+            Constraint::Length(2), // 3: username
+            Constraint::Length(2), // 4: password
+            Constraint::Length(2), // 5: strength bar
+            Constraint::Length(2), // 6: strength feedback
+            Constraint::Length(2), // 7: URL
+            Constraint::Length(2), // 8: TOTP
+            Constraint::Length(2), // 9: tags input
+            Constraint::Length(3), // 10: tags display
+            Constraint::Length(4), // 11: notes
+            Constraint::Min(1),    // 12: message
+            Constraint::Length(2), // 13: help
         ])
         .split(area);
     let block = Block::default()
@@ -250,19 +295,29 @@ pub fn draw_add_pwd(f: &mut Frame, size: Rect, app: &App) {
             inactive_style
         });
     f.render_widget(url_field, chunks[7]);
-    let tags_text = if app.add_fi == 4 {
+
+    let totp_field = Paragraph::new(format!("2FA Secret (optional): {}", app.n_entry_totp)).style(
+        if app.add_fi == 4 {
+            active_style
+        } else {
+            inactive_style
+        },
+    );
+    f.render_widget(totp_field, chunks[8]);
+
+    let tags_text = if app.add_fi == 5 {
         format!("Tags: {} ← Enter to add", app.tag_input)
     } else {
         "Tags: (Tab to focus)".to_string()
     };
     let tags_input = Paragraph::new(tags_text)
-        .style(if app.add_fi == 4 {
+        .style(if app.add_fi == 5 {
             active_style
         } else {
             inactive_style
         })
         .wrap(Wrap { trim: true });
-    f.render_widget(tags_input, chunks[8]);
+    f.render_widget(tags_input, chunks[9]);
     if !app.n_entry_tags.is_empty() {
         let tags_display = app
             .n_entry_tags
@@ -274,7 +329,7 @@ pub fn draw_add_pwd(f: &mut Frame, size: Rect, app: &App) {
         let tags_widget = Paragraph::new(format!("Added: {tags_display}"))
             .style(Style::default().fg(app.theme.orange()))
             .wrap(Wrap { trim: true });
-        f.render_widget(tags_widget, chunks[9]);
+        f.render_widget(tags_widget, chunks[10]);
     }
     let notes = Paragraph::new(format!("Notes:\n{}", app.n_entry_notes))
         .style(if app.add_fi == 5 {
@@ -283,7 +338,7 @@ pub fn draw_add_pwd(f: &mut Frame, size: Rect, app: &App) {
             inactive_style
         })
         .wrap(Wrap { trim: false });
-    f.render_widget(notes, chunks[10]);
+    f.render_widget(notes, chunks[11]);
     if !app.msg.is_empty() {
         let msg_style = match app.msg_type {
             MessageType::Success => Style::default().fg(app.theme.green()),
@@ -294,13 +349,13 @@ pub fn draw_add_pwd(f: &mut Frame, size: Rect, app: &App) {
         let msg = Paragraph::new(app.msg.as_str())
             .style(msg_style)
             .alignment(Alignment::Center);
-        f.render_widget(msg, chunks[11]);
+        f.render_widget(msg, chunks[12]);
     }
     let help =
         Paragraph::new("| Tab: Next field │ Enter: Add tag/Save │ 1-9: Remove tag │ Esc: Cancel |")
             .style(Style::default().fg(app.theme.gray()))
             .alignment(Alignment::Center);
-    f.render_widget(help, chunks[12]);
+    f.render_widget(help, chunks[13]);
 }
 
 #[allow(clippy::too_many_lines, clippy::cast_sign_loss)]
@@ -310,19 +365,20 @@ pub fn draw_edit_pwd(f: &mut Frame, size: Rect, app: &App) {
         .direction(Direction::Vertical)
         .margin(2)
         .constraints([
-            Constraint::Length(2),
-            Constraint::Length(1),
-            Constraint::Length(2),
-            Constraint::Length(2),
-            Constraint::Length(2),
-            Constraint::Length(2),
-            Constraint::Length(2),
-            Constraint::Length(2),
-            Constraint::Length(2),
-            Constraint::Length(3),
-            Constraint::Length(4),
-            Constraint::Min(1),
-            Constraint::Length(2),
+            Constraint::Length(2), // 0: title
+            Constraint::Length(1), // 1: spacer
+            Constraint::Length(2), // 2: name
+            Constraint::Length(2), // 3: username
+            Constraint::Length(2), // 4: pwd
+            Constraint::Length(2), // 5: strength bar
+            Constraint::Length(2), // 6: strength feedback
+            Constraint::Length(2), // 7: url
+            Constraint::Length(2), // 8: totp
+            Constraint::Length(2), // 9: tags input
+            Constraint::Length(3), // 10: tags display
+            Constraint::Length(4), // 11: notes
+            Constraint::Min(1),    // 12: message
+            Constraint::Length(2), // 13: help
         ])
         .split(area);
     let block = Block::default()
@@ -398,19 +454,29 @@ pub fn draw_edit_pwd(f: &mut Frame, size: Rect, app: &App) {
         inactive_style
     });
     f.render_widget(url_field, chunks[7]);
-    let tags_text = if app.add_fi == 4 {
+
+    let totp_field = Paragraph::new(format!("2FA Secret (optional): {}", app.n_entry_totp)).style(
+        if app.add_fi == 4 {
+            active_style
+        } else {
+            inactive_style
+        },
+    );
+    f.render_widget(totp_field, chunks[8]);
+
+    let tags_text = if app.add_fi == 5 {
         format!("Tags: {} ← Enter to add", app.tag_input)
     } else {
         "Tags: (Tab to focus)".to_string()
     };
     let tags_input = Paragraph::new(tags_text)
-        .style(if app.add_fi == 4 {
+        .style(if app.add_fi == 5 {
             active_style
         } else {
             inactive_style
         })
         .wrap(Wrap { trim: true });
-    f.render_widget(tags_input, chunks[8]);
+    f.render_widget(tags_input, chunks[9]);
     if !app.n_entry_tags.is_empty() {
         let tags_display = app
             .n_entry_tags
@@ -422,16 +488,16 @@ pub fn draw_edit_pwd(f: &mut Frame, size: Rect, app: &App) {
         let tags_widget = Paragraph::new(format!("Tags: {tags_display}"))
             .style(Style::default().fg(app.theme.orange()))
             .wrap(Wrap { trim: true });
-        f.render_widget(tags_widget, chunks[9]);
+        f.render_widget(tags_widget, chunks[10]);
     }
     let notes = Paragraph::new(format!("Notes:\n{}", app.n_entry_notes))
-        .style(if app.add_fi == 5 {
+        .style(if app.add_fi == 6 {
             active_style
         } else {
             inactive_style
         })
         .wrap(Wrap { trim: false });
-    f.render_widget(notes, chunks[10]);
+    f.render_widget(notes, chunks[11]);
     if !app.msg.is_empty() {
         let msg_style = match app.msg_type {
             MessageType::Success => Style::default().fg(app.theme.green()),
@@ -442,13 +508,13 @@ pub fn draw_edit_pwd(f: &mut Frame, size: Rect, app: &App) {
         let msg = Paragraph::new(app.msg.as_str())
             .style(msg_style)
             .alignment(Alignment::Center);
-        f.render_widget(msg, chunks[11]);
+        f.render_widget(msg, chunks[12]);
     }
     let help =
         Paragraph::new("| Tab: Next │ Enter: Add tag/Save │ 1-9: Remove tag │ Esc: Cancel |")
             .style(Style::default().fg(app.theme.gray()))
             .alignment(Alignment::Center);
-    f.render_widget(help, chunks[12]);
+    f.render_widget(help, chunks[13]);
 }
 
 pub fn draw_history(f: &mut Frame, size: Rect, app: &App) {
