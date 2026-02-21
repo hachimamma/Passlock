@@ -58,6 +58,7 @@ pub fn draw_view_pwds(f: &mut Frame, size: Rect, app: &App) {
     .style(Style::default().fg(app.theme.yellow()))
     .alignment(Alignment::Center);
     f.render_widget(title, chunks[0]);
+
     if app.entry_disp.is_empty() {
         let empty = if app.active_tf.is_some() || !app.search_query.is_empty() {
             "[ No matching entries found ]"
@@ -110,6 +111,7 @@ pub fn draw_view_pwds(f: &mut Frame, size: Rect, app: &App) {
                         Span::styled(&entry.p, Style::default().fg(app.theme.green())),
                     ]),
                 ];
+
                 if let Some(ref url) = entry.url {
                     lines.push(Line::from(vec![
                         Span::raw("     "),
@@ -117,6 +119,47 @@ pub fn draw_view_pwds(f: &mut Frame, size: Rect, app: &App) {
                         Span::styled(url, Style::default().fg(app.theme.aqua())),
                     ]));
                 }
+
+                if let Some(ref totp_secret) = entry.totp_secret {
+                    if app.show_totp_codes {
+                        if let Ok(code) = crate::totp::generate_totp(totp_secret) {
+                            let formatted_code = crate::totp::format_totp_code(&code);
+                            let remaining = crate::totp::get_totp_remaining_seconds();
+
+                            let totp_line = Line::from(vec![
+                                Span::raw("     "),
+                                Span::styled("├─ 2FA:  ", Style::default().fg(app.theme.gray())),
+                                Span::styled(
+                                    formatted_code,
+                                    Style::default()
+                                        .fg(app.theme.green())
+                                        .add_modifier(Modifier::BOLD),
+                                ),
+                                Span::raw("  "),
+                                Span::styled(
+                                    format!("(⏱ {remaining}s)"),
+                                    if remaining < 10 {
+                                        Style::default().fg(app.theme.red())
+                                    } else {
+                                        Style::default().fg(app.theme.gray())
+                                    },
+                                ),
+                            ]);
+                            lines.push(totp_line);
+                        } else {
+                            let error_line = Line::from(vec![
+                                Span::raw("     "),
+                                Span::styled("├─ 2FA:  ", Style::default().fg(app.theme.gray())),
+                                Span::styled(
+                                    "⚠ Invalid secret",
+                                    Style::default().fg(app.theme.red()),
+                                ),
+                            ]);
+                            lines.push(error_line);
+                        }
+                    }
+                }
+
                 if !entry.history.is_empty() {
                     lines.push(Line::from(vec![
                         Span::raw("     "),
@@ -126,6 +169,7 @@ pub fn draw_view_pwds(f: &mut Frame, size: Rect, app: &App) {
                         ),
                     ]));
                 }
+
                 if entry.tags.is_empty() {
                     lines.push(Line::from(vec![
                         Span::raw("     "),

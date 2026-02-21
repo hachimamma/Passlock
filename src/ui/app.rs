@@ -46,6 +46,9 @@ pub struct App {
     pub context_menu_y: u16,
     pub clipboard_msg: Option<String>,
     pub clipboard_countdown: Option<u64>,
+    pub entry_row_map: Vec<(u16, u16, usize)>,
+    pub n_entry_totp: String,
+    pub show_totp_codes: bool,
 }
 
 impl App {
@@ -90,6 +93,9 @@ impl App {
             context_menu_y: 0,
             clipboard_msg: None,
             clipboard_countdown: None,
+            entry_row_map: Vec::new(),
+            n_entry_totp: String::new(),
+            show_totp_codes: true,
         }
     }
 
@@ -185,6 +191,11 @@ impl App {
             tags: self.n_entry_tags.clone(),
             history: Vec::new(),
             last_modified: now,
+            totp_secret: if self.n_entry_totp.is_empty() {
+                None
+            } else {
+                Some(self.n_entry_totp.clone())
+            },
         };
         if let Some(ref mut vault) = self.vault {
             vault.e.push(entry);
@@ -240,6 +251,11 @@ impl App {
                 };
                 entry.tags.clone_from(&self.n_entry_tags);
                 entry.last_modified = now;
+                entry.totp_secret = if self.n_entry_totp.is_empty() {
+                    None
+                } else {
+                    Some(self.n_entry_totp.clone())
+                };
 
                 if let Err(e) = storage::svv(vault, &self.master_pwd) {
                     self.set_msg(&format!("Failed to save: {e}"), MessageType::Error);
@@ -266,6 +282,7 @@ impl App {
                 self.n_entry_url = entry.url.clone().unwrap_or_default();
                 self.n_entry_notes = entry.nt.clone().unwrap_or_default();
                 self.n_entry_tags = entry.tags.clone();
+                self.n_entry_totp = entry.totp_secret.clone().unwrap_or_default();
                 self.add_fi = 0;
                 self.screen = Screen::EditPassword;
             }
