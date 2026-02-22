@@ -118,6 +118,7 @@ passlock/
 │   ├── main.rs          # CLI entry point
 │   ├── models.rs        # Data structures
 │   ├── storage.rs       # Vault persistence
+│   ├── totp.rs          # TOTP/2FA generation
 │   ├── crypto.rs        # Crypto wrapper
 │   ├── vault_ffi.rs     # C FFI bindings
 │   ├── ui/              # TUI interface

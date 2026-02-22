@@ -119,7 +119,7 @@ passlock tui
 - Password strength checker
 - Password history tracking
 - Tags and categories
-- Copy to clipboard (auto-clear after 30s)
+- Copy to clipboard (auto-clear after 30s at default)
 
 ### TUI Navigation
 
@@ -137,6 +137,8 @@ passlock tui
 - `d` - Delete selected
 - `f` - Filter by tags
 - `q` - Back to menu
+- `Right-click` - Context menu with quick actions
+- `Scroll wheel` - Scroll through passwords
 
 **Creating/Editing:**
 - `Tab` - Next field
@@ -144,6 +146,13 @@ passlock tui
 - `Ctrl+G` - Generate password
 - `Enter` - Save
 - `Esc` - Cancel
+
+**Clipboard Settings**
+
+Configure clipboard auto-clear timeout:
+- Access: Esc → Options → Settings → Clipboard Timeout
+- Options: 10s, 30s, 60s, 120s, 300s, Never
+- Default: 30 seconds
 
 ---
 
@@ -177,7 +186,7 @@ Vault Status:
   Vault exists at: ~/.passlock.vault
   Size: 2 KB
 
-Version: PassLock v2.0.0
+Version: PassLock v2.3.5
 ```
 
 ---
@@ -247,6 +256,18 @@ Shows quick command reference.
 - View previous passwords
 - Restore old password if needed
 - Tracks when password was changed
+
+#### 9. **TOTP/2FA Codes**
+- View live 2FA codes in password list
+- Add 2FA secrets in add/edit screens
+- 6-digit codes refresh every 30 seconds
+- Compatible with Google Authenticator, Authy, etc.
+
+#### 10. **Right-Click Context Menu**
+- Right-click any password entry
+- Quick actions: Copy Password, Copy Username, Copy URL, Edit, View History
+- Keyboard navigation with ↑↓ arrows and Enter
+- Mouse scroll support
 
 ---
 

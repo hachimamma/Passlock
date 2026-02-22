@@ -11,7 +11,7 @@
 ## Features
 
 - **Military-grade encryption** - AES-256-GCM or ChaCha20-Poly1305 (auto-selected)
-- **Beautiful TUI** - Intuitive terminal interface with Gruvbox theme
+- **Beautiful TUI** - Intuitive terminal interface with Gruvbox theme (default)
 - **Blazing fast** - Written in Rust with C crypto core
 - **Local-only** - No cloud, no telemetry, no BS
 - **Password generator** - Strong, unique passwords every time
@@ -20,7 +20,10 @@
 - **Password history** - Track changes, restore old passwords
 - **Fast search** - Find passwords instantly
 - **CPU-aware** - Uses hardware acceleration when available
-- **Cross-platform** - Linux, macOS, Windows (coming soon)
+- **Cross-platform** - Linux, macOS
+- **TOTP/2FA Support** - Generate 2FA codes directly in PassLock
+- **Configurable clipboard timeout** - Choose when clipboard clears (10s-5min or never)
+- **Right-click context menu** - Mouse-driven quick actions
 
 ---
 
@@ -71,7 +74,7 @@ passlock tui
 ### Main Menu
 ```
 ┌────────────────────────────────────────┐
-│  PassLock v2.0.0                       │
+│  PassLock v2.3.5                       │
 │  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
 │                                        │
 │ ▶ View Passwords                      │
@@ -79,6 +82,7 @@ passlock tui
 │ ▶ Edit Password                       │
 │ ▶ Delete Password                     │
 │ ▶ View History                        │
+│ ▶ 2FA                                 │
 │ ▶ Search Passwords                    │
 │ ▶ Generate Password                   │
 │ ▶ Filter by Tags                      │
@@ -90,7 +94,7 @@ passlock tui
 └────────────────────────────────────────┘
 ```
 
-### Password List (Gruvbox Theme)
+### Password List
 ```
  ┌─ Passwords (5 entries) ──────────────────┐
  │ Search: _                                │
@@ -258,7 +262,7 @@ make format
 
 ## Roadmap
 
-### Version 2.0 (Current)
+### Version 2.0 (Previous)
 - [x] TUI interface with Gruvbox theme
 - [x] Adaptive encryption (AES/ChaCha20)
 - [x] Password generator
@@ -267,12 +271,15 @@ make format
 - [x] Search and filter
 - [x] CPU feature detection
 
-### Version 2.1 (In Progress)
+### Version 2.1 (Current)
+- [x] TOTP/2FA support
+- [x] Theme Selection
+- [x] Right-Click Context Menu
+- [x] Esc Menu
 - [ ] Browser extension (Chrome/Firefox)
 - [ ] Import from LastPass/1Password/Bitwarden
 - [ ] Export to various formats
 - [ ] Breach checker (HaveIBeenPwned integration)
-- [ ] TOTP/2FA support
 
 ### Version 3.0 (Planned)
 - [ ] Mobile app (iOS/Android)

@@ -7,6 +7,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.3.5] - 2026-02-22
+
+### Added
+- **Configurable Clipboard Timeout** - Users can now customize clipboard auto-clear duration
+  - Available options: 10s, 30s, 60s, 120s, 300s, Never (disabled)
+  - Accessible from Settings screen (Esc → Options → Settings)
+  - Default: 30 seconds
+
+### Fixed
+- **Right-Click Context Menu** - Complete rewrite of clickable area detection
+  - Now dynamically calculates clickable regions based on actual entry content
+  - Properly handles entries with varying fields (URL, 2FA, History)
+  - Maintains proper spacing regardless of entry length
+  - Fixed issue where clickable areas were misaligned for entries with different field counts
+  - Context menu now accurately responds to mouse clicks on any part of an entry
+
+### Changed
+- Right-click detection now uses dynamic row mapping instead of hardcoded calculations
+- Settings screen now displays current clipboard timeout value
+
+---
+
+## [2.3.4] - 2026-02-21
+
+### Added
+- **TOTP/2FA Support** - Time-based One-Time Password generation
+  - Base32 secret key support
+  - Automatic 6-digit code generation every 30 seconds
+  - Live countdown timer showing seconds remaining
+  - Invalid key detection and error display
+  - Uses `SystemTime` for accurate time-based generation
+  - Compatible with Google Authenticator, Authy, and other TOTP apps
+  - Accessible from Add/Edit/View screens
+
+- **Right-Click Context Menu** - Mouse-driven password management
+  - 5 quick actions: Copy Password, Copy Username, Copy URL, Edit Entry, View History
+  - Full mouse integration with right-click detection
+  - Keyboard navigation support (↑/↓ arrows, Enter, Esc)
+  - URL option grayed out when not available
+  - Mouse scrolling support in password list
+  - Clickable area detection for each entry
+
+### Fixed
+- TOTP field integration in add/edit forms
+- Tab navigation now includes 2FA secret field
+- Context menu positioning and boundary detection
+
+### Technical
+- Added dependencies: `totp-lite` (v2.0), `base32` (v0.4)
+- Created `src/totp.rs` module for TOTP functionality
+- Enhanced `Entry` model with `totp_secret` field
+- Implemented dynamic clickable regions for context menu
+
+---
 
 ## [2.2.3] - 2026-02-16
 
@@ -26,6 +80,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Terminal cleanup issues when pressing Esc
 - Ctrl+S now properly saves instead of typing 's'
+
+---
 
 ## [2.0.0] - 2026-02-15
 
@@ -134,21 +190,25 @@ Special thanks to:
 
 ## [Unreleased]
 
-### Planned for v2.1.0
-- Browser extension (Chrome/Firefox)
-- Import from LastPass/1Password/Bitwarden
-- HaveIBeenPwned breach checker
-- TOTP/2FA support
-- Vault migration tools
+### Planned for v2.4.0
+- Attachment support for credentials
+- Secure notes functionality
+- Export vault to encrypted formats
+- Import from other password managers
 
 ### Planned for v3.0.0
+- Browser extension (Chrome/Firefox)
 - Mobile apps (iOS/Android)
 - Team/family sharing
 - Emergency access
 - Hardware key support (YubiKey)
 - Passkey/WebAuthn support
+- HaveIBeenPwned breach checker
 
 ---
 
+[2.3.5]: https://github.com/hachimamma/Passlock/releases/tag/v2.3.5
+[2.3.4]: https://github.com/hachimamma/Passlock/releases/tag/v2.3.4
+[2.2.3]: https://github.com/hachimamma/Passlock/releases/tag/v2.2.3
 [2.0.0]: https://github.com/hachimamma/Passlock/releases/tag/v2.0.0
 [1.0.0]: https://github.com/hachimamma/Passlock/releases/tag/v1.0.0
