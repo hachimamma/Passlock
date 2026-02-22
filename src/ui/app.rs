@@ -49,6 +49,7 @@ pub struct App {
     pub entry_row_map: Vec<(u16, u16, usize)>,
     pub n_entry_totp: String,
     pub show_totp_codes: bool,
+    pub clipboard_timeout: u64,
 }
 
 impl App {
@@ -96,6 +97,7 @@ impl App {
             entry_row_map: Vec::new(),
             n_entry_totp: String::new(),
             show_totp_codes: true,
+            clipboard_timeout: 30,
         }
     }
 

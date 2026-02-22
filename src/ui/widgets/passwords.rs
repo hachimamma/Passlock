@@ -11,8 +11,10 @@ use ratatui::{
     Frame,
 };
 
-#[allow(clippy::too_many_lines)]
-pub fn draw_view_pwds(f: &mut Frame, size: Rect, app: &App) {
+#[allow(clippy::too_many_lines, clippy::cast_possible_truncation)]
+pub fn draw_view_pwds(f: &mut Frame, size: Rect, app: &mut App) {
+    app.entry_row_map.clear();
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(1)
@@ -70,63 +72,65 @@ pub fn draw_view_pwds(f: &mut Frame, size: Rect, app: &App) {
             .alignment(Alignment::Center);
         f.render_widget(empty_paragraph, chunks[1]);
     } else {
-        let items: Vec<ListItem> = app
-            .entry_disp
-            .iter()
-            .enumerate()
-            .map(|(i, entry)| {
-                let is_selected = i == app.selected_entry;
-                let prefix = if is_selected { "▶ " } else { "  " };
-                let time_ago = App::get_ta(entry.last_modified);
-                let mut lines = vec![
-                    Line::from(vec![
-                        Span::styled(prefix, Style::default().fg(app.theme.yellow())),
-                        Span::styled(
-                            format!("[{}] ", i + 1),
-                            Style::default().fg(app.theme.orange()),
-                        ),
-                        Span::styled(
-                            &entry.n,
-                            if is_selected {
-                                Style::default()
-                                    .fg(app.theme.yellow())
-                                    .add_modifier(Modifier::BOLD)
-                            } else {
-                                Style::default().fg(app.theme.yellow())
-                            },
-                        ),
-                        Span::styled(
-                            format!("  (Modified: {time_ago})"),
-                            Style::default().fg(app.theme.gray()),
-                        ),
-                    ]),
-                    Line::from(vec![
-                        Span::raw("     "),
-                        Span::styled("├─ User: ", Style::default().fg(app.theme.gray())),
-                        Span::styled(&entry.u, Style::default().fg(app.theme.blue())),
-                    ]),
-                    Line::from(vec![
-                        Span::raw("     "),
-                        Span::styled("├─ Pass: ", Style::default().fg(app.theme.gray())),
-                        Span::styled(&entry.p, Style::default().fg(app.theme.green())),
-                    ]),
-                ];
+        let content_area_top = chunks[1].y;
+        let mut current_row = content_area_top;
+        let mut entry_lines_vec: Vec<Vec<Line>> = Vec::new();
 
-                if let Some(ref url) = entry.url {
-                    lines.push(Line::from(vec![
-                        Span::raw("     "),
-                        Span::styled("├─ URL:  ", Style::default().fg(app.theme.gray())),
-                        Span::styled(url, Style::default().fg(app.theme.aqua())),
-                    ]));
-                }
+        for (i, entry) in app.entry_disp.iter().enumerate() {
+            let is_selected = i == app.selected_entry;
+            let prefix = if is_selected { "▶ " } else { "  " };
+            let time_ago = App::get_ta(entry.last_modified);
 
-                if let Some(ref totp_secret) = entry.totp_secret {
-                    if app.show_totp_codes {
-                        if let Ok(code) = crate::totp::generate_totp(totp_secret) {
+            let mut lines = vec![
+                Line::from(vec![
+                    Span::styled(prefix, Style::default().fg(app.theme.yellow())),
+                    Span::styled(
+                        format!("[{}] ", i + 1),
+                        Style::default().fg(app.theme.orange()),
+                    ),
+                    Span::styled(
+                        &entry.n,
+                        if is_selected {
+                            Style::default()
+                                .fg(app.theme.yellow())
+                                .add_modifier(Modifier::BOLD)
+                        } else {
+                            Style::default().fg(app.theme.yellow())
+                        },
+                    ),
+                    Span::styled(
+                        format!("  (Modified: {time_ago})"),
+                        Style::default().fg(app.theme.gray()),
+                    ),
+                ]),
+                Line::from(vec![
+                    Span::raw("     "),
+                    Span::styled("├─ User: ", Style::default().fg(app.theme.gray())),
+                    Span::styled(&entry.u, Style::default().fg(app.theme.blue())),
+                ]),
+                Line::from(vec![
+                    Span::raw("     "),
+                    Span::styled("├─ Pass: ", Style::default().fg(app.theme.gray())),
+                    Span::styled(&entry.p, Style::default().fg(app.theme.green())),
+                ]),
+            ];
+
+            if let Some(ref url) = entry.url {
+                lines.push(Line::from(vec![
+                    Span::raw("     "),
+                    Span::styled("├─ URL:  ", Style::default().fg(app.theme.gray())),
+                    Span::styled(url, Style::default().fg(app.theme.aqua())),
+                ]));
+            }
+
+            if let Some(ref totp_secret) = entry.totp_secret {
+                if app.show_totp_codes {
+                    match crate::totp::generate_totp(totp_secret) {
+                        Ok(code) => {
                             let formatted_code = crate::totp::format_totp_code(&code);
                             let remaining = crate::totp::get_totp_remaining_seconds();
 
-                            let totp_line = Line::from(vec![
+                            lines.push(Line::from(vec![
                                 Span::raw("     "),
                                 Span::styled("├─ 2FA:  ", Style::default().fg(app.theme.gray())),
                                 Span::styled(
@@ -137,58 +141,69 @@ pub fn draw_view_pwds(f: &mut Frame, size: Rect, app: &App) {
                                 ),
                                 Span::raw("  "),
                                 Span::styled(
-                                    format!("({remaining}s)"),
+                                    format!("(⏱ {remaining}s)"),
                                     if remaining < 10 {
                                         Style::default().fg(app.theme.red())
                                     } else {
                                         Style::default().fg(app.theme.gray())
                                     },
                                 ),
-                            ]);
-                            lines.push(totp_line);
-                        } else {
-                            let error_line = Line::from(vec![
+                            ]));
+                        }
+                        Err(_) => {
+                            lines.push(Line::from(vec![
                                 Span::raw("     "),
                                 Span::styled("├─ 2FA:  ", Style::default().fg(app.theme.gray())),
                                 Span::styled(
                                     "⚠ Invalid secret",
                                     Style::default().fg(app.theme.red()),
                                 ),
-                            ]);
-                            lines.push(error_line);
+                            ]));
                         }
                     }
                 }
+            }
 
-                if !entry.history.is_empty() {
-                    lines.push(Line::from(vec![
-                        Span::raw("     "),
-                        Span::styled(
-                            format!("├─ History: {} changes", entry.history.len()),
-                            Style::default().fg(app.theme.purple()),
-                        ),
-                    ]));
-                }
+            if !entry.history.is_empty() {
+                lines.push(Line::from(vec![
+                    Span::raw("     "),
+                    Span::styled(
+                        format!("├─ History: {} changes", entry.history.len()),
+                        Style::default().fg(app.theme.purple()),
+                    ),
+                ]));
+            }
 
-                if entry.tags.is_empty() {
-                    lines.push(Line::from(vec![
-                        Span::raw("     "),
-                        Span::styled("└─", Style::default().fg(app.theme.gray())),
-                    ]));
-                } else {
-                    lines.push(Line::from(vec![
-                        Span::raw("     "),
-                        Span::styled("└─ Tags: ", Style::default().fg(app.theme.gray())),
-                        Span::styled(
-                            entry.tags.join(", "),
-                            Style::default().fg(app.theme.orange()),
-                        ),
-                    ]));
-                }
-                lines.push(Line::from(""));
-                ListItem::new(lines)
-            })
-            .collect();
+            if entry.tags.is_empty() {
+                lines.push(Line::from(vec![
+                    Span::raw("     "),
+                    Span::styled("└─", Style::default().fg(app.theme.gray())),
+                ]));
+            } else {
+                lines.push(Line::from(vec![
+                    Span::raw("     "),
+                    Span::styled("└─ Tags: ", Style::default().fg(app.theme.gray())),
+                    Span::styled(
+                        entry.tags.join(", "),
+                        Style::default().fg(app.theme.orange()),
+                    ),
+                ]));
+            }
+
+            lines.push(Line::from(""));
+
+            let line_count = lines.len() as u16;
+            let clickable_start = current_row + 1;
+            let clickable_end = current_row + line_count - 2;
+
+            app.entry_row_map.push((clickable_start, clickable_end, i));
+            current_row += line_count;
+
+            entry_lines_vec.push(lines);
+        }
+
+        let items: Vec<ListItem> = entry_lines_vec.into_iter().map(ListItem::new).collect();
+
         let list = List::new(items).block(Block::default().borders(Borders::NONE));
         f.render_widget(list, chunks[1]);
     }
@@ -209,15 +224,15 @@ pub fn draw_add_pwd(f: &mut Frame, size: Rect, app: &App) {
             Constraint::Length(1), // 1: spacer
             Constraint::Length(2), // 2: name
             Constraint::Length(2), // 3: username
-            Constraint::Length(2), // 4: password
+            Constraint::Length(2), // 4: pwd
             Constraint::Length(2), // 5: strength bar
-            Constraint::Length(2), // 6: strength feedback
-            Constraint::Length(2), // 7: URL
-            Constraint::Length(2), // 8: TOTP
+            Constraint::Length(2), // 6: strength feedbkac
+            Constraint::Length(2), // 7: url
+            Constraint::Length(2), // 8: totp
             Constraint::Length(2), // 9: tags input
-            Constraint::Length(3), // 10: tags display
+            Constraint::Length(3), // 10: Tags display
             Constraint::Length(4), // 11: notes
-            Constraint::Min(1),    // 12: message
+            Constraint::Min(1),    // 12: msg
             Constraint::Length(2), // 13: help
         ])
         .split(area);
@@ -377,7 +392,7 @@ pub fn draw_edit_pwd(f: &mut Frame, size: Rect, app: &App) {
             Constraint::Length(2), // 9: tags input
             Constraint::Length(3), // 10: tags display
             Constraint::Length(4), // 11: notes
-            Constraint::Min(1),    // 12: message
+            Constraint::Min(1),    // 12: msg
             Constraint::Length(2), // 13: help
         ])
         .split(area);

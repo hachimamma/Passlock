@@ -595,8 +595,21 @@ pub fn handle_settings_screen(app: &mut App, key: KeyCode) {
             app.set_msg("Auto-save coming soon!", MessageType::Info);
         }
         KeyCode::Char('3') => {
-            // clipboard timeout (future feature)
-            app.set_msg("Clipboard timeout coming soon!", MessageType::Info);
+            app.clipboard_timeout = match app.clipboard_timeout {
+                10 => 30,
+                30 => 60,
+                60 => 120,
+                120 => 300,
+                300 => 0,
+                _ => 10,
+            };
+
+            let msg = if app.clipboard_timeout == 0 {
+                "Clipboard auto-clear: DISABLED".to_string()
+            } else {
+                format!("Clipboard timeout: {}s", app.clipboard_timeout)
+            };
+            app.set_msg(&msg, MessageType::Success);
         }
         KeyCode::Enter => match app.settings_menu_index {
             0 => {
@@ -606,12 +619,34 @@ pub fn handle_settings_screen(app: &mut App, key: KeyCode) {
                     .iter()
                     .position(|t| t == &app.theme)
                     .unwrap_or(0);
+                app.clipboard_timeout = match app.clipboard_timeout {
+                    10 => 30,
+                    30 => 60,
+                    60 => 120,
+                    120 => 300,
+                    300 => 0,
+                    _ => 10,
+                };
             }
             1 => {
                 app.set_msg("Auto-save coming soon!", MessageType::Info);
             }
             2 => {
-                app.set_msg("Clipboard timeout coming soon!", MessageType::Info);
+                app.clipboard_timeout = match app.clipboard_timeout {
+                    10 => 30,
+                    30 => 60,
+                    60 => 120,
+                    120 => 300,
+                    300 => 0,
+                    _ => 10,
+                };
+
+                let msg = if app.clipboard_timeout == 0 {
+                    "Clipboard auto-clear: DISABLED".to_string()
+                } else {
+                    format!("Clipboard timeout: {}s", app.clipboard_timeout)
+                };
+                app.set_msg(&msg, MessageType::Success);
             }
             _ => {}
         },

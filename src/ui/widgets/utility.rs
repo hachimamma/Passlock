@@ -549,7 +549,11 @@ pub fn draw_settings_screen(f: &mut Frame, area: Rect, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(2)
-        .constraints([Constraint::Length(3), Constraint::Min(5)])
+        .constraints([
+            Constraint::Length(3),
+            Constraint::Min(5),
+            Constraint::Length(3),
+        ])
         .split(inner);
 
     let title = Paragraph::new("Preferences")
@@ -562,10 +566,16 @@ pub fn draw_settings_screen(f: &mut Frame, area: Rect, app: &App) {
     f.render_widget(title, chunks[0]);
 
     let current_theme = app.theme.name();
+    let cltime_disp = if app.clipboard_timeout == 0 {
+        "Never".to_string()
+    } else {
+        format!("{}s", app.clipboard_timeout)
+    };
+
     let items = [
-        ("1", "Theme", format!("Current: {current_theme}")),
-        ("2", "Auto-save", "Coming soon".to_string()),
-        ("3", "Clipboard timeout", "Coming soon".to_string()),
+        ("1", "Theme Selector", format!("Current: {current_theme}")),
+        ("2", "Auto-Save", "Coming soon".to_string()),
+        ("3", "Clipboard Timeout", format!("Current: {cltime_disp}")),
     ];
 
     let list_items: Vec<ListItem> = items
@@ -602,6 +612,12 @@ pub fn draw_settings_screen(f: &mut Frame, area: Rect, app: &App) {
 
     let list = List::new(list_items);
     f.render_widget(list, chunks[1]);
+
+    let help_text = "Press number or Enter to select | ↑↓: Navigate | Esc: Back";
+    let help = Paragraph::new(help_text)
+        .style(Style::default().fg(app.theme.gray()))
+        .alignment(Alignment::Center);
+    f.render_widget(help, chunks[2]);
 }
 
 #[allow(clippy::too_many_lines)]

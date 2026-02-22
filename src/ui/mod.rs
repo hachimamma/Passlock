@@ -67,7 +67,7 @@ pub fn run_tui() -> Result<(), Box<dyn std::error::Error>> {
 fn handle_context_menu_click(app: &mut App, click_x: u16, click_y: u16) {
     use crate::ui::clipboard;
     use screens::MessageType;
-    const TIMEOUT: u64 = 30;
+    let timeout = app.clipboard_timeout;
 
     let menu_x = app.context_menu_x;
     let menu_y = app.context_menu_y;
@@ -91,7 +91,7 @@ fn handle_context_menu_click(app: &mut App, click_x: u16, click_y: u16) {
 
         match item {
             0 => {
-                let result = clipboard::copy_with_timeout(&entry.p, TIMEOUT);
+                let result = clipboard::copy_with_timeout(&entry.p, timeout);
 
                 app.clipboard_countdown = if result.success {
                     Some(result.expires_at)
@@ -108,7 +108,7 @@ fn handle_context_menu_click(app: &mut App, click_x: u16, click_y: u16) {
                 );
             }
             1 => {
-                let result = clipboard::copy_with_timeout(&entry.u, TIMEOUT);
+                let result = clipboard::copy_with_timeout(&entry.u, timeout);
                 app.clipboard_countdown = if result.success {
                     Some(result.expires_at)
                 } else {
@@ -125,7 +125,7 @@ fn handle_context_menu_click(app: &mut App, click_x: u16, click_y: u16) {
             }
             2 => {
                 if let Some(ref url) = entry.url {
-                    let result = clipboard::copy_with_timeout(url, TIMEOUT);
+                    let result = clipboard::copy_with_timeout(url, timeout);
                     app.clipboard_countdown = if result.success {
                         Some(result.expires_at)
                     } else {
@@ -184,16 +184,11 @@ fn run_app<B: ratatui::backend::Backend>(
                         let y = mouse_event.row;
                         let x = mouse_event.column;
 
-                        if (5..=170).contains(&x) && y >= 5 {
-                            let relative_y = y - 5;
-                            let block = relative_y / 6;
-                            let offset = relative_y % 6;
-
-                            if offset < 4 {
-                                let entry_idx = block as usize;
-                                if entry_idx < app.entry_disp.len() {
+                        if (5..=170).contains(&x) {
+                            for (start_row, end_row, entry_idx) in &app.entry_row_map {
+                                if y >= *start_row && y <= *end_row {
                                     app.context_menu_visible = true;
-                                    app.context_menu_entry_idx = entry_idx;
+                                    app.context_menu_entry_idx = *entry_idx;
                                     app.context_menu_selected = 0;
 
                                     let term_width = 174u16;
@@ -204,6 +199,7 @@ fn run_app<B: ratatui::backend::Backend>(
                                         x
                                     };
                                     app.context_menu_y = y;
+                                    break;
                                 }
                             }
                         }
@@ -235,7 +231,7 @@ fn run_app<B: ratatui::backend::Backend>(
                     if app.context_menu_visible {
                         use crate::ui::clipboard;
                         use screens::MessageType;
-                        const TIMEOUT: u64 = 30;
+                        let timeout = app.clipboard_timeout;
 
                         match key_event.code {
                             KeyCode::Down => {
@@ -260,7 +256,7 @@ fn run_app<B: ratatui::backend::Backend>(
                                 match app.context_menu_selected {
                                     0 => {
                                         let result =
-                                            clipboard::copy_with_timeout(&entry.p, TIMEOUT);
+                                            clipboard::copy_with_timeout(&entry.p, timeout);
                                         app.clipboard_countdown = if result.success {
                                             Some(result.expires_at)
                                         } else {
@@ -277,7 +273,7 @@ fn run_app<B: ratatui::backend::Backend>(
                                     }
                                     1 => {
                                         let result =
-                                            clipboard::copy_with_timeout(&entry.u, TIMEOUT);
+                                            clipboard::copy_with_timeout(&entry.u, timeout);
                                         app.clipboard_countdown = if result.success {
                                             Some(result.expires_at)
                                         } else {
@@ -294,7 +290,7 @@ fn run_app<B: ratatui::backend::Backend>(
                                     }
                                     2 => {
                                         if let Some(ref url) = entry.url {
-                                            let result = clipboard::copy_with_timeout(url, TIMEOUT);
+                                            let result = clipboard::copy_with_timeout(url, timeout);
                                             app.clipboard_countdown = if result.success {
                                                 Some(result.expires_at)
                                             } else {
@@ -388,7 +384,7 @@ fn run_app<B: ratatui::backend::Backend>(
     Ok(())
 }
 
-fn ui(f: &mut Frame, app: &App) {
+fn ui(f: &mut Frame, app: &mut App) {
     let size = f.size();
     match app.screen {
         Screen::VaultCheck => draw_loading(f, size, app),
