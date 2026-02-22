@@ -612,12 +612,6 @@ pub fn draw_settings_screen(f: &mut Frame, area: Rect, app: &App) {
 
     let list = List::new(list_items);
     f.render_widget(list, chunks[1]);
-
-    let help_text = "Press number or Enter to select | ↑↓: Navigate | Esc: Back";
-    let help = Paragraph::new(help_text)
-        .style(Style::default().fg(app.theme.gray()))
-        .alignment(Alignment::Center);
-    f.render_widget(help, chunks[2]);
 }
 
 #[allow(clippy::too_many_lines)]
