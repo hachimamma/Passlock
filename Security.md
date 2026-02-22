@@ -104,6 +104,11 @@ Every vault operation is authenticated. Any tampering results in decryption fail
 - Temporary files (`~/.passlock.temp`) deleted on clean exit
 - Master password never stored (only held in memory during session)
 
+### 7. **Configurable Security**
+- User-controlled clipboard timeout
+- Option to disable auto-clear for trusted environments
+- Balance between security and usability
+
 ---
 
 ## Audit Status
@@ -177,6 +182,12 @@ PassLock builds are **not yet reproducible**. This is on our roadmap for v3.0.
 4. **Avoid untrusted systems:**
    - Don't use PassLock on shared/public computers
    - Don't run on compromised/infected systems
+
+### TOTP/2FA Security
+- TOTP secrets stored encrypted in vault (same as passwords)
+- Base32 format validation
+- Time-based code generation using system time
+- 30-second refresh interval (RFC 6238 compliant)
 
 ### File Permissions
 
@@ -300,7 +311,7 @@ PassLock follows industry best practices:
    - Keys stored in memory during use
    - Future: Hardware key integration
 
-2. **No secure clipboard** (yet)
+2. **Configurable clipboard timeout (10s-5min or disabled)**
    - Clipboard cleared after 30s
    - Future: Secure clipboard API
 
@@ -350,8 +361,8 @@ This security policy is part of the PassLock project and follows the same MIT Li
 
 ---
 
-**Last Updated:** February 15, 2025  
-**Version:** 2.0.0
+**Last Updated:** February 22, 2026
+**Version:** 2.3.5
 
 ---
 
