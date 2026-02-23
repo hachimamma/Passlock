@@ -30,7 +30,73 @@ echo -e "${BLUE}PassLock v${PASSLOCK_VERSION} Installer${NC}"
 echo -e "${BLUE}─────────────────────────────────${NC}"
 echo ""
 
-# Rust install
+detect_os() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        OS="macos"
+        if command -v brew &>/dev/null; then
+            PKG_MANAGER="brew"
+            PKG_INSTALL="brew install"
+            PKG_UPDATE="brew update"
+            LIBSODIUM_PKG="libsodium"
+        else
+            echo -e "${RED}[✗] Homebrew not found. Please install Homebrew first:${NC}"
+            echo -e "${YELLOW}  /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"${NC}"
+            exit 1
+        fi
+    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        OS="linux"
+        if command -v apt-get &>/dev/null; then
+            PKG_MANAGER="apt"
+            PKG_INSTALL="sudo apt-get install -y"
+            PKG_UPDATE="sudo apt-get update"
+            LIBSODIUM_PKG="libsodium-dev"
+        elif command -v pacman &>/dev/null; then
+            PKG_MANAGER="pacman"
+            PKG_INSTALL="sudo pacman -S --noconfirm"
+            PKG_UPDATE="sudo pacman -Sy"
+            LIBSODIUM_PKG="libsodium"
+        elif command -v dnf &>/dev/null; then
+            PKG_MANAGER="dnf"
+            PKG_INSTALL="sudo dnf install -y"
+            PKG_UPDATE="sudo dnf check-update || true"
+            LIBSODIUM_PKG="libsodium-devel"
+        elif command -v yum &>/dev/null; then
+            PKG_MANAGER="yum"
+            PKG_INSTALL="sudo yum install -y"
+            PKG_UPDATE="sudo yum check-update || true"
+            LIBSODIUM_PKG="libsodium-devel"
+        else
+            echo -e "${RED}[✗] Unsupported Linux distribution${NC}"
+            echo -e "${YELLOW}  Please install libsodium manually and run this script again${NC}"
+            exit 1
+        fi
+    else
+        echo -e "${RED}[✗] Unsupported operating system: $OSTYPE${NC}"
+        exit 1
+    fi
+}
+
+install_libsodium() {
+    detect_os
+    
+    echo -e "${BLUE}Installing libsodium...${NC}"
+    
+    if [ "$PKG_MANAGER" != "pacman" ]; then
+        $PKG_UPDATE
+    fi
+    
+    $PKG_INSTALL $LIBSODIUM_PKG
+    
+    if [ "$OS" = "linux" ]; then
+        if ldconfig -p 2>/dev/null | grep -q libsodium || pkg-config --exists libsodium 2>/dev/null; then
+            echo -e "${GREEN}[✓] libsodium installed successfully${NC}"
+        else
+            echo -e "${YELLOW}[⚠] Could not verify libsodium installation. Continuing anyway...${NC}"
+        fi
+    else
+        echo -e "${GREEN}[✓] libsodium installed successfully${NC}"
+    fi
+}
 
 install_rust() {
     echo -e "${YELLOW}Rust not found. Installing...${NC}"
@@ -48,27 +114,38 @@ install_rust() {
     echo -e "${GREEN}[✓] Rust installed!${NC}"
 }
 
-# Go install
-
 install_go() {
     echo -e "${YELLOW}Go not found. Installing...${NC}"
 
     GO_VERSION="1.22.0"
     ARCH=$(uname -m)
-    OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+    
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        OS_ARCH="darwin"
+        case $ARCH in
+            x86_64)  ARCH="amd64" ;;
+            arm64)   ARCH="arm64" ;;
+            *)
+                echo -e "${RED}[✗] Unsupported architecture: $ARCH${NC}"
+                echo -e "${YELLOW}  Please install Go manually: https://go.dev/dl${NC}"
+                exit 1
+                ;;
+        esac
+    else
+        OS_ARCH="linux"
+        case $ARCH in
+            x86_64)  ARCH="amd64" ;;
+            aarch64) ARCH="arm64" ;;
+            armv*)   ARCH="armv6l" ;;
+            *)
+                echo -e "${RED}[✗] Unsupported architecture: $ARCH${NC}"
+                echo -e "${YELLOW}  Please install Go manually: https://go.dev/dl${NC}"
+                exit 1
+                ;;
+        esac
+    fi
 
-    case $ARCH in
-        x86_64)  ARCH="amd64" ;;
-        aarch64) ARCH="arm64" ;;
-        armv*)   ARCH="armv6l" ;;
-        *)
-            echo -e "${RED}[✗] Unsupported architecture: $ARCH${NC}"
-            echo -e "${YELLOW}  Please install Go manually: https://go.dev/dl${NC}"
-            exit 1
-            ;;
-    esac
-
-    GO_TAR="go${GO_VERSION}.${OS}-${ARCH}.tar.gz"
+    GO_TAR="go${GO_VERSION}.${OS_ARCH}-${ARCH}.tar.gz"
     GO_URL="https://go.dev/dl/${GO_TAR}"
 
     echo -e "${BLUE}  Downloading Go ${GO_VERSION}...${NC}"
@@ -95,6 +172,8 @@ install_go() {
         SHELL_RC="$HOME/.zshrc"
     elif [ -f "$HOME/.bashrc" ]; then
         SHELL_RC="$HOME/.bashrc"
+    elif [ -f "$HOME/.bash_profile" ]; then
+        SHELL_RC="$HOME/.bash_profile"
     fi
 
     if [ -n "$SHELL_RC" ]; then
@@ -107,9 +186,31 @@ install_go() {
     echo -e "${GREEN}[✓] Go ${GO_VERSION} installed!${NC}"
 }
 
-# Check deps
+echo -e "${BLUE}Checking system dependencies...${NC}"
 
-echo -e "${BLUE}Checking dependencies...${NC}"
+if ! command -v pkg-config &>/dev/null; then
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        echo -e "${YELLOW}pkg-config not found. Installing...${NC}"
+        brew install pkg-config
+    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        if command -v apt-get &>/dev/null; then
+            echo -e "${YELLOW}pkg-config not found. Installing...${NC}"
+            sudo apt-get install -y pkg-config
+        elif command -v pacman &>/dev/null; then
+            echo -e "${YELLOW}pkg-config not found. Installing...${NC}"
+            sudo pacman -S --noconfirm pkg-config
+        fi
+    fi
+fi
+
+if ! pkg-config --exists libsodium 2>/dev/null; then
+    echo -e "${YELLOW}libsodium not found. Installing...${NC}"
+    install_libsodium
+else
+    echo -e "${GREEN}[✓] libsodium $(pkg-config --modversion libsodium)${NC}"
+fi
+
+echo ""
 
 if ! command -v rustc &>/dev/null; then
     read -rp "$(echo -e "${YELLOW}Rust is not installed. Install it now? [y/N]: ${NC}")" answer
@@ -132,12 +233,10 @@ if ! command -v go &>/dev/null; then
         exit 1
     fi
 else
-    echo -e "${GREEN}[✓] Go $(go version | cut -d' ' -f3)${NC}"
+    echo -e "${GREEN}[✓] Go $(go version | cut -d' ' -f3 | sed 's/go//')${NC}"
 fi
 
 echo ""
-
-# Build
 
 echo -e "${BLUE}Building PassLock CLI...${NC}"
 cargo build --release
@@ -150,21 +249,18 @@ echo -e "${GREEN}[✓] Server built${NC}"
 
 echo ""
 
-# Install
-
 if [ "$LOCAL_INSTALL" = true ]; then
     INSTALL_DIR="$HOME/.local/bin"
     mkdir -p "$INSTALL_DIR"
     cp target/release/passlock "$INSTALL_DIR/passlock"
     cp bin/passlock-server "$INSTALL_DIR/passlock-server"
-    chmod +x "$INSTALL_DIR/passlock"
-    chmod +x "$INSTALL_DIR/passlock-server"
+    chmod +x "$INSTALL_DIR/passlock" "$INSTALL_DIR/passlock-server"
     echo -e "${GREEN}[✓] Installed to ~/.local/bin${NC}"
     echo ""
 
     if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
         echo -e "${YELLOW}[⚠] ~/.local/bin is not in your PATH!${NC}"
-        echo -e "${YELLOW}  Add this to your ~/.bashrc or ~/.zshrc:${NC}"
+        echo -e "${YELLOW}  Add this to your ~/.bashrc, ~/.zshrc, or ~/.bash_profile:${NC}"
         echo -e "${YELLOW}  export PATH=\"\$HOME/.local/bin:\$PATH\"${NC}"
         echo ""
     fi
@@ -172,12 +268,10 @@ else
     echo -e "${BLUE}Installing (requires sudo)...${NC}"
     sudo cp target/release/passlock /usr/local/bin/passlock
     sudo cp bin/passlock-server /usr/local/bin/passlock-server
-    sudo chmod +x /usr/local/bin/passlock
-    sudo chmod +x /usr/local/bin/passlock-server
+    sudo chmod +x /usr/local/bin/passlock /usr/local/bin/passlock-server
     echo -e "${GREEN}[✓] Installed to /usr/local/bin${NC}"
     echo ""
 fi
-
 
 echo -e "${GREEN}PassLock v${PASSLOCK_VERSION} installed successfully!${NC}"
 echo ""
