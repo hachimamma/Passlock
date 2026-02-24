@@ -6,7 +6,7 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, BorderType, List, ListItem, Paragraph},
+    widgets::{Block, BorderType, Borders, List, ListItem, Paragraph},
     Frame,
 };
 
@@ -21,20 +21,20 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
         .direction(Direction::Vertical)
         .margin(2)
         .constraints([
-            Constraint::Length(3),   // title
-            Constraint::Length(11),  // system info
-            Constraint::Min(20),     // menu
+            Constraint::Length(3),  // title
+            Constraint::Length(11), // system info
+            Constraint::Min(20),    // menu
         ])
         .split(size);
 
     let title_lines = vec![
         Line::from(""),
-        Line::from(vec![
-            Span::styled("PASSLOCK", 
-                Style::default()
-                    .fg(app.theme.red())
-                    .add_modifier(Modifier::BOLD)),
-        ]),
+        Line::from(vec![Span::styled(
+            "PASSLOCK",
+            Style::default()
+                .fg(app.theme.red())
+                .add_modifier(Modifier::BOLD),
+        )]),
         Line::from(""),
     ];
     let title = Paragraph::new(title_lines).alignment(Alignment::Center);
@@ -45,7 +45,7 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
         let with_2fa = vault.e.iter().filter(|e| e.totp_secret.is_some()).count();
         let tags = app.all_tags.len();
         let cipher = vault_ffi::get_cipher();
-        
+
         let info_area = Rect {
             x: main_layout[1].x,
             y: main_layout[1].y,
@@ -54,29 +54,57 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
         };
 
         let info_lines = vec![
-            Line::from(vec![
-                Span::styled("System Info", Style::default().fg(app.theme.aqua()).add_modifier(Modifier::BOLD)),
-            ]),
+            Line::from(vec![Span::styled(
+                "System Info",
+                Style::default()
+                    .fg(app.theme.aqua())
+                    .add_modifier(Modifier::BOLD),
+            )]),
             Line::from(""),
             Line::from(vec![
                 Span::styled("Version     ", Style::default().fg(app.theme.gray())),
-                Span::styled("v2.3.5", Style::default().fg(app.theme.yellow()).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "v2.3.5",
+                    Style::default()
+                        .fg(app.theme.yellow())
+                        .add_modifier(Modifier::BOLD),
+                ),
             ]),
             Line::from(vec![
                 Span::styled("Encryption  ", Style::default().fg(app.theme.gray())),
-                Span::styled(cipher, Style::default().fg(app.theme.purple()).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    cipher,
+                    Style::default()
+                        .fg(app.theme.purple())
+                        .add_modifier(Modifier::BOLD),
+                ),
             ]),
             Line::from(vec![
                 Span::styled("Passwords   ", Style::default().fg(app.theme.gray())),
-                Span::styled(format!("{}", total), Style::default().fg(app.theme.green()).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    format!("{total}"),
+                    Style::default()
+                        .fg(app.theme.green())
+                        .add_modifier(Modifier::BOLD),
+                ),
             ]),
             Line::from(vec![
                 Span::styled("2FA Enabled ", Style::default().fg(app.theme.gray())),
-                Span::styled(format!("{}", with_2fa), Style::default().fg(app.theme.orange()).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    format!("{with_2fa}"),
+                    Style::default()
+                        .fg(app.theme.orange())
+                        .add_modifier(Modifier::BOLD),
+                ),
             ]),
             Line::from(vec![
                 Span::styled("Tags        ", Style::default().fg(app.theme.gray())),
-                Span::styled(format!("{}", tags), Style::default().fg(app.theme.blue()).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    format!("{tags}"),
+                    Style::default()
+                        .fg(app.theme.blue())
+                        .add_modifier(Modifier::BOLD),
+                ),
             ]),
             Line::from(vec![
                 Span::styled("Theme       ", Style::default().fg(app.theme.gray())),
@@ -84,18 +112,18 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
             ]),
         ];
 
-        let info_box = Paragraph::new(info_lines)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .border_type(BorderType::Rounded)
-                    .border_style(Style::default().fg(app.theme.aqua()))
-            );
+        let info_box = Paragraph::new(info_lines).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(app.theme.aqua())),
+        );
         f.render_widget(info_box, info_area);
     }
 
     if !app.msg.is_empty() {
-        let msg_width = app.msg.len().max(30).min(60) as u16 + 4;
+        #[allow(clippy::cast_possible_truncation)]
+        let msg_width = (app.msg.len().clamp(30, 60) as u16) + 4;
         let status_area = Rect {
             x: main_layout[1].x + main_layout[1].width - msg_width,
             y: main_layout[1].y,
@@ -117,7 +145,7 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
                 Block::default()
                     .borders(Borders::ALL)
                     .border_type(BorderType::Rounded)
-                    .border_style(msg_style)
+                    .border_style(msg_style),
             );
         f.render_widget(status_msg, status_area);
     }
@@ -137,19 +165,28 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
         .enumerate()
         .map(|(i, (num, title, desc))| {
             let is_selected = i == app.selected_menu;
-            
+
             let title_style = if is_selected {
-                Style::default().fg(app.theme.yellow()).add_modifier(Modifier::BOLD)
+                Style::default()
+                    .fg(app.theme.yellow())
+                    .add_modifier(Modifier::BOLD)
             } else {
-                Style::default().fg(app.theme.fg()).add_modifier(Modifier::BOLD)
+                Style::default()
+                    .fg(app.theme.fg())
+                    .add_modifier(Modifier::BOLD)
             };
-            
+
             let prefix = if is_selected { "▶ " } else { "  " };
-            
+
             ListItem::new(vec![
                 Line::from(vec![
                     Span::styled(prefix, Style::default().fg(app.theme.yellow())),
-                    Span::styled(format!("[{}] ", num), Style::default().fg(app.theme.orange()).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        format!("[{num}] "),
+                        Style::default()
+                            .fg(app.theme.orange())
+                            .add_modifier(Modifier::BOLD),
+                    ),
                     Span::styled(*title, title_style),
                 ]),
                 Line::from(vec![
@@ -167,7 +204,9 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
         .border_style(Style::default().fg(app.theme.green()))
         .title(Span::styled(
             " [ Menu ] ",
-            Style::default().fg(app.theme.green()).add_modifier(Modifier::BOLD)
+            Style::default()
+                .fg(app.theme.green())
+                .add_modifier(Modifier::BOLD),
         ));
 
     let menu = List::new(menu_list).block(menu_block);
