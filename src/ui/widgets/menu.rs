@@ -17,27 +17,29 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
         .style(Style::default().bg(app.theme.bg0()));
     f.render_widget(block, size);
 
-    // Main layout
     let main_layout = Layout::default()
         .direction(Direction::Vertical)
         .margin(2)
         .constraints([
-            Constraint::Length(3),   // Title
-            Constraint::Length(11),  // System info area
-            Constraint::Min(20),     // Menu
+            Constraint::Length(3),   // title
+            Constraint::Length(11),  // system info
+            Constraint::Min(20),     // menu
         ])
         .split(size);
 
-    // ═══ TITLE (centered) ═══
-    let title = Paragraph::new(Line::from(vec![
-        Span::styled("PASSLOCK", Style::default()
-            .fg(app.theme.red())
-            .add_modifier(Modifier::BOLD)),
-    ]))
-    .alignment(Alignment::Center);
+    let title_lines = vec![
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("PASSLOCK", 
+                Style::default()
+                    .fg(app.theme.red())
+                    .add_modifier(Modifier::BOLD)),
+        ]),
+        Line::from(""),
+    ];
+    let title = Paragraph::new(title_lines).alignment(Alignment::Center);
     f.render_widget(title, main_layout[0]);
 
-    // ═══ SYSTEM INFO (left side of info area) ═══
     if let Some(ref vault) = app.vault {
         let total = vault.e.len();
         let with_2fa = vault.e.iter().filter(|e| e.totp_secret.is_some()).count();
@@ -92,7 +94,6 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
         f.render_widget(info_box, info_area);
     }
 
-    // ═══ STATUS MESSAGE (right side of info area) ═══
     if !app.msg.is_empty() {
         let msg_width = app.msg.len().max(30).min(60) as u16 + 4;
         let status_area = Rect {
@@ -121,7 +122,6 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
         f.render_widget(status_msg, status_area);
     }
 
-    // ═══ MENU ═══
     let all_items = [
         ("1", "View Passwords", "Browse all entries"),
         ("2", "Add Password", "Create new entry"),
