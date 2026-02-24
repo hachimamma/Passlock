@@ -20,18 +20,18 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
     let main_layout = Layout::default()
         .direction(Direction::Horizontal)
         .margin(2)
-        .constraints([
-            Constraint::Percentage(65), // left
-            Constraint::Percentage(35), // right
-        ])
+        .constraints([Constraint::Percentage(65), Constraint::Percentage(35)])
         .split(size);
+
+    let has_vault = app.vault.is_some();
+    let system_info_height = if has_vault { 8 } else { 4 };
 
     let left_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),  // title
-            Constraint::Length(11), // system info
-            Constraint::Min(20),    // menu
+            Constraint::Length(3),                  // title
+            Constraint::Length(system_info_height), // system info and crypto
+            Constraint::Min(20),                    // menu
         ])
         .split(main_layout[0]);
 
@@ -43,6 +43,14 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
     )]))
     .alignment(Alignment::Center);
     f.render_widget(title, left_layout[0]);
+
+    let info_row_layout = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage(55), // system info
+            Constraint::Percentage(45), // crypto
+        ])
+        .split(left_layout[1]);
 
     if let Some(ref vault) = app.vault {
         let total = vault.e.len();
@@ -58,55 +66,24 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
                     .add_modifier(Modifier::BOLD),
             )]),
             Line::from(""),
-            Line::from(vec![
-                Span::styled("Version     ", Style::default().fg(app.theme.gray())),
-                Span::styled(
-                    "v2.3.5",
-                    Style::default()
-                        .fg(app.theme.yellow())
-                        .add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(vec![
-                Span::styled("Encryption  ", Style::default().fg(app.theme.gray())),
-                Span::styled(
-                    cipher,
-                    Style::default()
-                        .fg(app.theme.purple())
-                        .add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(vec![
-                Span::styled("Passwords   ", Style::default().fg(app.theme.gray())),
-                Span::styled(
-                    format!("{total}"),
-                    Style::default()
-                        .fg(app.theme.green())
-                        .add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(vec![
-                Span::styled("2FA Enabled ", Style::default().fg(app.theme.gray())),
-                Span::styled(
-                    format!("{with_2fa}"),
-                    Style::default()
-                        .fg(app.theme.orange())
-                        .add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(vec![
-                Span::styled("Tags        ", Style::default().fg(app.theme.gray())),
-                Span::styled(
-                    format!("{tags}"),
-                    Style::default()
-                        .fg(app.theme.blue())
-                        .add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(vec![
-                Span::styled("Theme       ", Style::default().fg(app.theme.gray())),
-                Span::styled(app.theme.name(), Style::default().fg(app.theme.aqua())),
-            ]),
+            Line::from(vec![Span::styled(
+                "v2.3.5",
+                Style::default()
+                    .fg(app.theme.yellow())
+                    .add_modifier(Modifier::BOLD),
+            )]),
+            Line::from(vec![Span::styled(
+                cipher,
+                Style::default().fg(app.theme.purple()),
+            )]),
+            Line::from(vec![Span::styled(
+                format!("{total} passwords"),
+                Style::default().fg(app.theme.green()),
+            )]),
+            Line::from(vec![Span::styled(
+                format!("{with_2fa} 2FA │ {tags} tags"),
+                Style::default().fg(app.theme.blue()),
+            )]),
         ];
 
         let info_box = Paragraph::new(info_lines).block(
@@ -115,7 +92,54 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
                 .border_type(BorderType::Rounded)
                 .border_style(Style::default().fg(app.theme.aqua())),
         );
-        f.render_widget(info_box, left_layout[1]);
+        f.render_widget(info_box, info_row_layout[0]);
+
+        let is_aes = vault_ffi::aes_sup();
+        let crypto_lines = vec![
+            Line::from(vec![Span::styled(
+                "Crypto",
+                Style::default()
+                    .fg(app.theme.red())
+                    .add_modifier(Modifier::BOLD),
+            )]),
+            Line::from(""),
+            Line::from(vec![Span::styled(
+                "┌─────────┐",
+                Style::default().fg(app.theme.gray()),
+            )]),
+            Line::from(vec![
+                Span::styled("│ ", Style::default().fg(app.theme.gray())),
+                Span::styled(
+                    if is_aes { "AES-NI" } else { "ChaCha" },
+                    Style::default()
+                        .fg(app.theme.green())
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled("  │", Style::default().fg(app.theme.gray())),
+            ]),
+            Line::from(vec![Span::styled(
+                "└─────────┘",
+                Style::default().fg(app.theme.gray()),
+            )]),
+            Line::from(vec![Span::styled(
+                "[ Hardware ]",
+                Style::default().fg(if is_aes {
+                    app.theme.green()
+                } else {
+                    app.theme.red()
+                }),
+            )]),
+        ];
+
+        let crypto_box = Paragraph::new(crypto_lines)
+            .alignment(Alignment::Center)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .border_style(Style::default().fg(app.theme.red())),
+            );
+        f.render_widget(crypto_box, info_row_layout[1]);
     }
 
     let all_items = [
@@ -185,9 +209,7 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
         .constraints([
             Constraint::Length(3), // status msg
             Constraint::Length(1), // spacer
-            Constraint::Min(10),   // pwd strength stats
-            Constraint::Length(1), // spacer
-            Constraint::Min(8),    // recent activity
+            Constraint::Min(10),   // pwd stats
         ])
         .split(main_layout[1]);
 
@@ -215,68 +237,128 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
         let total = vault.e.len();
         let with_2fa = vault.e.iter().filter(|e| e.totp_secret.is_some()).count();
         let with_url = vault.e.iter().filter(|e| e.url.is_some()).count();
+        let with_notes = vault
+            .e
+            .iter()
+            .filter(|e| e.nt.as_ref().is_some_and(|n| !n.is_empty()))
+            .count();
 
-        let stats_lines = vec![
+        let two_fa_pct = if total > 0 {
+            (with_2fa * 100) / total
+        } else {
+            0
+        };
+        let url_pct = if total > 0 {
+            (with_url * 100) / total
+        } else {
+            0
+        };
+        let notes_pct = if total > 0 {
+            (with_notes * 100) / total
+        } else {
+            0
+        };
+
+        let create_bar = |pct: usize| -> String {
+            let filled = pct / 10;
+            let mut bar = String::new();
+            for i in 0..10 {
+                bar.push(if i < filled { '█' } else { '░' });
+            }
+            bar
+        };
+
+        let mut stats_lines = vec![
             Line::from(vec![Span::styled(
-                "Password Stats",
+                "Password Statistics",
                 Style::default()
                     .fg(app.theme.yellow())
                     .add_modifier(Modifier::BOLD),
             )]),
             Line::from(""),
-            Line::from(vec![
-                Span::styled("Total      ", Style::default().fg(app.theme.gray())),
-                Span::styled(
-                    format!("{total}"),
-                    Style::default()
-                        .fg(app.theme.yellow())
-                        .add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(vec![
-                Span::styled("With 2FA   ", Style::default().fg(app.theme.gray())),
-                Span::styled(
-                    format!("{with_2fa} "),
-                    Style::default().fg(app.theme.green()),
-                ),
-                Span::styled(
-                    format!(
-                        "({}%)",
-                        if total > 0 {
-                            (with_2fa * 100) / total
-                        } else {
-                            0
-                        }
-                    ),
-                    Style::default().fg(app.theme.gray()),
-                ),
-            ]),
-            Line::from(vec![
-                Span::styled("With URL   ", Style::default().fg(app.theme.gray())),
-                Span::styled(
-                    format!("{with_url} "),
-                    Style::default().fg(app.theme.blue()),
-                ),
-                Span::styled(
-                    format!(
-                        "({}%)",
-                        if total > 0 {
-                            (with_url * 100) / total
-                        } else {
-                            0
-                        }
-                    ),
-                    Style::default().fg(app.theme.gray()),
-                ),
-            ]),
+            Line::from(vec![Span::styled(
+                "━━━━━━━━━━━━━━━━━━━━━━━",
+                Style::default().fg(app.theme.gray()),
+            )]),
             Line::from(""),
-            Line::from(vec![
-                Span::styled("▓", Style::default().fg(app.theme.green())),
-                Span::raw(" 2FA  "),
-                Span::styled("▓", Style::default().fg(app.theme.blue())),
-                Span::raw(" URL"),
-            ]),
+            Line::from(vec![Span::styled(
+                "Total Entries",
+                Style::default().fg(app.theme.gray()),
+            )]),
+            Line::from(vec![Span::styled(
+                format!("   {total}"),
+                Style::default()
+                    .fg(app.theme.yellow())
+                    .add_modifier(Modifier::BOLD),
+            )]),
+            Line::from(""),
+            Line::from(vec![Span::styled(
+                "2FA Protection",
+                Style::default().fg(app.theme.gray()),
+            )]),
+            Line::from(vec![Span::styled(
+                format!("   {}", create_bar(two_fa_pct)),
+                Style::default().fg(app.theme.green()),
+            )]),
+            Line::from(vec![Span::styled(
+                format!("   {with_2fa} entries ({two_fa_pct}%)"),
+                Style::default().fg(app.theme.green()),
+            )]),
+            Line::from(""),
+            Line::from(vec![Span::styled(
+                "With URLs",
+                Style::default().fg(app.theme.gray()),
+            )]),
+            Line::from(vec![Span::styled(
+                format!("   {}", create_bar(url_pct)),
+                Style::default().fg(app.theme.blue()),
+            )]),
+            Line::from(vec![Span::styled(
+                format!("   {with_url} entries ({url_pct}%)"),
+                Style::default().fg(app.theme.blue()),
+            )]),
+            Line::from(""),
+            Line::from(vec![Span::styled(
+                "With Notes",
+                Style::default().fg(app.theme.gray()),
+            )]),
+            Line::from(vec![Span::styled(
+                format!("   {}", create_bar(notes_pct)),
+                Style::default().fg(app.theme.purple()),
+            )]),
+            Line::from(vec![Span::styled(
+                format!("   {with_notes} entries ({notes_pct}%)"),
+                Style::default().fg(app.theme.purple()),
+            )]),
         ];
+
+        if !app.all_tags.is_empty() {
+            stats_lines.push(Line::from(""));
+            stats_lines.push(Line::from(vec![Span::styled(
+                "━━━━━━━━━━━━━━━━━━━━━━━",
+                Style::default().fg(app.theme.gray()),
+            )]));
+            stats_lines.push(Line::from(""));
+            stats_lines.push(Line::from(vec![Span::styled(
+                "Top Tags",
+                Style::default()
+                    .fg(app.theme.aqua())
+                    .add_modifier(Modifier::BOLD),
+            )]));
+
+            for (tag, count) in app.all_tags.iter().take(3) {
+                stats_lines.push(Line::from(vec![
+                    Span::styled(
+                        format!("   {tag} "),
+                        Style::default().fg(app.theme.purple()),
+                    ),
+                    Span::styled(
+                        format!("({count})"),
+                        Style::default().fg(app.theme.gray()),
+                    ),
+                ]));
+            }
+        }
 
         let stats_box = Paragraph::new(stats_lines).block(
             Block::default()
@@ -285,41 +367,5 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
                 .border_style(Style::default().fg(app.theme.yellow())),
         );
         f.render_widget(stats_box, right_layout[2]);
-
-        let tips = vec![
-            Line::from(vec![Span::styled(
-                "Quick Tips",
-                Style::default()
-                    .fg(app.theme.purple())
-                    .add_modifier(Modifier::BOLD),
-            )]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("• ", Style::default().fg(app.theme.orange())),
-                Span::styled(
-                    "Press T/8 to change theme",
-                    Style::default().fg(app.theme.fg()),
-                ),
-            ]),
-            Line::from(vec![
-                Span::styled("• ", Style::default().fg(app.theme.orange())),
-                Span::styled(
-                    "Right-click for quick menu",
-                    Style::default().fg(app.theme.fg()),
-                ),
-            ]),
-            Line::from(vec![
-                Span::styled("• ", Style::default().fg(app.theme.orange())),
-                Span::styled("Esc for options", Style::default().fg(app.theme.fg())),
-            ]),
-        ];
-
-        let tips_box = Paragraph::new(tips).block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(app.theme.purple())),
-        );
-        f.render_widget(tips_box, right_layout[4]);
     }
 }
