@@ -376,10 +376,7 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
                         format!("   {tag} "),
                         Style::default().fg(app.theme.purple()),
                     ),
-                    Span::styled(
-                        format!("({count})"),
-                        Style::default().fg(app.theme.gray()),
-                    ),
+                    Span::styled(format!("({count})"), Style::default().fg(app.theme.gray())),
                 ]));
             }
         }
