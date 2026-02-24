@@ -1,192 +1,395 @@
 use super::super::app::App;
 use super::super::colors::ThemeColors;
 use super::super::screens::MessageType;
+use crate::vault_ffi;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
+    widgets::{Block, BorderType, Borders, List, ListItem, Paragraph},
     Frame,
 };
 
 #[allow(clippy::too_many_lines)]
 pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
+    let block = Block::default()
+        .borders(Borders::NONE)
+        .style(Style::default().bg(app.theme.bg0()));
+    f.render_widget(block, size);
+
     let main_layout = Layout::default()
-        .direction(Direction::Vertical)
-        .margin(1)
-        .constraints([Constraint::Length(5), Constraint::Min(10)])
+        .direction(Direction::Horizontal)
+        .margin(2)
+        .constraints([Constraint::Percentage(65), Constraint::Percentage(35)])
         .split(size);
 
-    let header_block = Block::default()
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(app.theme.yellow()))
-        .style(Style::default().bg(app.theme.bg0()));
+    let has_vault = app.vault.is_some();
+    let system_info_height = if has_vault { 8 } else { 4 };
 
-    let vault_info = if let Some(ref vault) = app.vault {
-        let tag_count = app.all_tags.len();
-        let disp_count = app.entry_disp.len();
-        let total_count = vault.e.len();
-        let filter_indicator = if disp_count == total_count {
-            String::new()
-        } else {
-            format!(" (Filtered: {disp_count})")
-        };
-        vec![
+    let left_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3),                  // title
+            Constraint::Length(system_info_height), // system info and crypto
+            Constraint::Min(20),                    // menu
+        ])
+        .split(main_layout[0]);
+
+    let title = Paragraph::new(Line::from(vec![Span::styled(
+        "PASSLOCK",
+        Style::default()
+            .fg(app.theme.red())
+            .add_modifier(Modifier::BOLD),
+    )]))
+    .alignment(Alignment::Center);
+    f.render_widget(title, left_layout[0]);
+
+    let info_row_layout = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage(55), // system info
+            Constraint::Percentage(45), // crypto
+        ])
+        .split(left_layout[1]);
+
+    if let Some(ref vault) = app.vault {
+        let total = vault.e.len();
+        let with_2fa = vault.e.iter().filter(|e| e.totp_secret.is_some()).count();
+        let tags = app.all_tags.len();
+        let cipher = vault_ffi::get_cipher();
+
+        let info_lines = vec![
             Line::from(vec![Span::styled(
-                "█▓▒░ PASSLOCK ░▒▓█",
+                "System Info",
                 Style::default()
-                    .fg(app.theme.orange())
+                    .fg(app.theme.aqua())
                     .add_modifier(Modifier::BOLD),
             )]),
             Line::from(""),
             Line::from(vec![
-                Span::styled("Vault: ", Style::default().fg(app.theme.gray())),
                 Span::styled(
-                    "UNLOCKED ",
+                    "Build: v",
+                    Style::default()
+                        .fg(app.theme.gray())
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    env!("CARGO_PKG_VERSION"),
+                    Style::default().fg(app.theme.yellow()),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled(
+                    "Cipher: ",
+                    Style::default()
+                        .fg(app.theme.gray())
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(cipher, Style::default().fg(app.theme.purple())),
+            ]),
+            Line::from(vec![
+                Span::styled(
+                    "Entries: ",
+                    Style::default()
+                        .fg(app.theme.gray())
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(format!("{total}"), Style::default().fg(app.theme.green())),
+            ]),
+            Line::from(vec![
+                Span::styled(
+                    "Stats: ",
+                    Style::default()
+                        .fg(app.theme.gray())
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    format!("{with_2fa} 2FA │ {tags} tags"),
+                    Style::default().fg(app.theme.blue()),
+                ),
+            ]),
+        ];
+
+        let info_box = Paragraph::new(info_lines).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(app.theme.aqua())),
+        );
+        f.render_widget(info_box, info_row_layout[0]);
+
+        let is_aes = vault_ffi::aes_sup();
+        let crypto_lines = vec![
+            Line::from(vec![Span::styled(
+                "Crypto",
+                Style::default()
+                    .fg(app.theme.red())
+                    .add_modifier(Modifier::BOLD),
+            )]),
+            Line::from(""),
+            Line::from(vec![Span::styled(
+                "┌──────────┐",
+                Style::default().fg(app.theme.gray()),
+            )]),
+            Line::from(vec![
+                Span::styled("│  ", Style::default().fg(app.theme.gray())),
+                Span::styled(
+                    if is_aes { "AES-NI" } else { "ChaCha" },
                     Style::default()
                         .fg(app.theme.green())
                         .add_modifier(Modifier::BOLD),
                 ),
-                Span::styled("│ ", Style::default().fg(app.theme.gray())),
-                Span::styled(
-                    format!("{total_count} passwords{filter_indicator} "),
-                    Style::default().fg(app.theme.blue()),
-                ),
-                Span::styled("│ ", Style::default().fg(app.theme.gray())),
-                Span::styled(
-                    format!("{tag_count} tags"),
-                    Style::default().fg(app.theme.purple()),
-                ),
+                Span::styled("  │", Style::default().fg(app.theme.gray())),
             ]),
-        ]
-    } else {
-        vec![
-            Line::from(Span::styled(
-                "PASSLOCK",
-                Style::default().fg(app.theme.red()),
-            )),
-            Line::from(""),
-            Line::from("No vault loaded"),
-        ]
-    };
+            Line::from(vec![Span::styled(
+                "└──────────┘",
+                Style::default().fg(app.theme.gray()),
+            )]),
+            Line::from(vec![Span::styled(
+                "Hardware",
+                Style::default().fg(if is_aes {
+                    app.theme.green()
+                } else {
+                    app.theme.red()
+                }),
+            )]),
+        ];
 
-    let header = Paragraph::new(vault_info)
-        .block(header_block)
-        .alignment(Alignment::Center);
-    f.render_widget(header, main_layout[0]);
+        let crypto_box = Paragraph::new(crypto_lines)
+            .alignment(Alignment::Center)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .border_style(Style::default().fg(app.theme.red())),
+            );
+        f.render_widget(crypto_box, info_row_layout[1]);
+    }
 
-    let content_layout = Layout::default()
-        .direction(Direction::Horizontal)
-        .margin(0)
-        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+    let all_items = [
+        ("1", "View Passwords", "Browse all entries"),
+        ("2", "Add Password", "Create new entry"),
+        ("3", "Search", "Find passwords"),
+        ("4", "Filter by Tags", "Sort entries"),
+        ("5", "Generate Password", "Random secure"),
+        ("6", "Delete Entry", "Remove password"),
+        ("7", "Exit", "Lock vault"),
+    ];
+
+    let menu_list: Vec<ListItem> = all_items
+        .iter()
+        .enumerate()
+        .map(|(i, (num, title, desc))| {
+            let is_selected = i == app.selected_menu;
+
+            let title_style = if is_selected {
+                Style::default()
+                    .fg(app.theme.yellow())
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default()
+                    .fg(app.theme.fg())
+                    .add_modifier(Modifier::BOLD)
+            };
+
+            let prefix = if is_selected { "▶ " } else { "  " };
+
+            ListItem::new(vec![
+                Line::from(vec![
+                    Span::styled(prefix, Style::default().fg(app.theme.yellow())),
+                    Span::styled(
+                        format!("[{num}] "),
+                        Style::default()
+                            .fg(app.theme.orange())
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(*title, title_style),
+                ]),
+                Line::from(vec![
+                    Span::raw("     "),
+                    Span::styled(*desc, Style::default().fg(app.theme.gray())),
+                ]),
+                Line::from(""),
+            ])
+        })
+        .collect();
+
+    let menu_block = Block::default()
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .border_style(Style::default().fg(app.theme.green()))
+        .title(Span::styled(
+            " [ Menu ] ",
+            Style::default()
+                .fg(app.theme.green())
+                .add_modifier(Modifier::BOLD),
+        ));
+
+    let menu = List::new(menu_list).block(menu_block);
+    f.render_widget(menu, left_layout[2]);
+
+    let right_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3), // status msg
+            Constraint::Length(1), // spacer
+            Constraint::Min(10),   // pwd stats
+        ])
         .split(main_layout[1]);
 
-    let left_block = Block::default()
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(app.theme.green()))
-        .title("═══ PASSWORDS ═══")
-        .title_alignment(Alignment::Center)
-        .style(Style::default().bg(app.theme.bg0()));
-
-    let left_items = [
-        ("1", "View All", "Browse vault"),
-        ("2", "Add New", "Create entry"),
-        ("3", "Search", "Find passwords"),
-    ];
-
-    let left_list: Vec<ListItem> = left_items
-        .iter()
-        .enumerate()
-        .map(|(i, (num, title, desc))| {
-            let is_selected = app.selected_section == 0 && i == app.selected_menu;
-            let style = if is_selected {
-                Style::default()
-                    .fg(app.theme.yellow())
-                    .add_modifier(Modifier::BOLD)
-            } else {
-                Style::default().fg(app.theme.fg())
-            };
-            let prefix = if is_selected { "▶ " } else { "  " };
-            let lines = vec![
-                Line::from(vec![
-                    Span::styled(prefix, Style::default().fg(app.theme.yellow())),
-                    Span::styled(format!("[{num}] "), Style::default().fg(app.theme.orange())),
-                    Span::styled(*title, style),
-                ]),
-                Line::from(vec![
-                    Span::raw("     "),
-                    Span::styled(*desc, Style::default().fg(app.theme.gray())),
-                ]),
-                Line::from(""),
-            ];
-            ListItem::new(lines)
-        })
-        .collect();
-
-    let left = List::new(left_list).block(left_block);
-    f.render_widget(left, content_layout[0]);
-
-    let right_block = Block::default()
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(app.theme.purple()))
-        .title("═══ TOOLS ═══")
-        .title_alignment(Alignment::Center)
-        .style(Style::default().bg(app.theme.bg0()));
-
-    let right_items = [
-        ("4", "Filter Tags", "Sort by tags"),
-        ("5", "Generate", "Random password"),
-        ("6", "Delete", "Remove entry"),
-        ("7", "Exit", "Lock & quit"),
-    ];
-
-    let right_list: Vec<ListItem> = right_items
-        .iter()
-        .enumerate()
-        .map(|(i, (num, title, desc))| {
-            let is_selected = app.selected_section == 1 && i == app.selected_menu - 3;
-            let style = if is_selected {
-                Style::default()
-                    .fg(app.theme.yellow())
-                    .add_modifier(Modifier::BOLD)
-            } else {
-                Style::default().fg(app.theme.fg())
-            };
-            let prefix = if is_selected { "▶ " } else { "  " };
-            let lines = vec![
-                Line::from(vec![
-                    Span::styled(prefix, Style::default().fg(app.theme.yellow())),
-                    Span::styled(format!("[{num}] "), Style::default().fg(app.theme.orange())),
-                    Span::styled(*title, style),
-                ]),
-                Line::from(vec![
-                    Span::raw("     "),
-                    Span::styled(*desc, Style::default().fg(app.theme.gray())),
-                ]),
-                Line::from(""),
-            ];
-            ListItem::new(lines)
-        })
-        .collect();
-
-    let right = List::new(right_list).block(right_block);
-    f.render_widget(right, content_layout[1]);
-
     if !app.msg.is_empty() {
-        let msg_area = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Min(0), Constraint::Length(3)])
-            .split(main_layout[1])[1];
         let msg_style = match app.msg_type {
             MessageType::Success => Style::default().fg(app.theme.green()),
             MessageType::Error => Style::default().fg(app.theme.red()),
             MessageType::Info => Style::default().fg(app.theme.blue()),
             MessageType::None => Style::default().fg(app.theme.fg()),
         };
-        let msg = Paragraph::new(app.msg.as_str())
-            .style(msg_style)
+
+        let status_msg = Paragraph::new(app.msg.as_str())
+            .style(msg_style.add_modifier(Modifier::BOLD))
             .alignment(Alignment::Center)
-            .wrap(Wrap { trim: true });
-        f.render_widget(msg, msg_area);
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .border_style(msg_style),
+            );
+        f.render_widget(status_msg, right_layout[0]);
+    }
+
+    if let Some(ref vault) = app.vault {
+        let total = vault.e.len();
+        let with_2fa = vault.e.iter().filter(|e| e.totp_secret.is_some()).count();
+        let with_url = vault.e.iter().filter(|e| e.url.is_some()).count();
+        let with_notes = vault
+            .e
+            .iter()
+            .filter(|e| e.nt.as_ref().is_some_and(|n| !n.is_empty()))
+            .count();
+
+        let two_fa_pct = if total > 0 {
+            (with_2fa * 100) / total
+        } else {
+            0
+        };
+        let url_pct = if total > 0 {
+            (with_url * 100) / total
+        } else {
+            0
+        };
+        let notes_pct = if total > 0 {
+            (with_notes * 100) / total
+        } else {
+            0
+        };
+
+        let create_bar = |pct: usize| -> String {
+            let filled = pct / 10;
+            let mut bar = String::new();
+            for i in 0..10 {
+                bar.push(if i < filled { '█' } else { '░' });
+            }
+            bar
+        };
+
+        let mut stats_lines = vec![
+            Line::from(vec![Span::styled(
+                "Password Statistics",
+                Style::default()
+                    .fg(app.theme.yellow())
+                    .add_modifier(Modifier::BOLD),
+            )]),
+            Line::from(""),
+            Line::from(vec![Span::styled(
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+                Style::default().fg(app.theme.gray()),
+            )]),
+            Line::from(""),
+            Line::from(vec![Span::styled(
+                "Total Entries",
+                Style::default().fg(app.theme.gray()),
+            )]),
+            Line::from(vec![Span::styled(
+                format!("   {total}"),
+                Style::default()
+                    .fg(app.theme.yellow())
+                    .add_modifier(Modifier::BOLD),
+            )]),
+            Line::from(""),
+            Line::from(vec![Span::styled(
+                "2FA Protection",
+                Style::default().fg(app.theme.gray()),
+            )]),
+            Line::from(vec![Span::styled(
+                format!("   {}", create_bar(two_fa_pct)),
+                Style::default().fg(app.theme.green()),
+            )]),
+            Line::from(vec![Span::styled(
+                format!("   {with_2fa} entries ({two_fa_pct}%)"),
+                Style::default().fg(app.theme.green()),
+            )]),
+            Line::from(""),
+            Line::from(vec![Span::styled(
+                "With URLs",
+                Style::default().fg(app.theme.gray()),
+            )]),
+            Line::from(vec![Span::styled(
+                format!("   {}", create_bar(url_pct)),
+                Style::default().fg(app.theme.blue()),
+            )]),
+            Line::from(vec![Span::styled(
+                format!("   {with_url} entries ({url_pct}%)"),
+                Style::default().fg(app.theme.blue()),
+            )]),
+            Line::from(""),
+            Line::from(vec![Span::styled(
+                "With Notes",
+                Style::default().fg(app.theme.gray()),
+            )]),
+            Line::from(vec![Span::styled(
+                format!("   {}", create_bar(notes_pct)),
+                Style::default().fg(app.theme.purple()),
+            )]),
+            Line::from(vec![Span::styled(
+                format!("   {with_notes} entries ({notes_pct}%)"),
+                Style::default().fg(app.theme.purple()),
+            )]),
+        ];
+
+        if !app.all_tags.is_empty() {
+            stats_lines.push(Line::from(""));
+            stats_lines.push(Line::from(vec![Span::styled(
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+                Style::default().fg(app.theme.gray()),
+            )]));
+            stats_lines.push(Line::from(""));
+            stats_lines.push(Line::from(vec![Span::styled(
+                "Top Tags",
+                Style::default()
+                    .fg(app.theme.aqua())
+                    .add_modifier(Modifier::BOLD),
+            )]));
+
+            for (tag, count) in app.all_tags.iter().take(3) {
+                stats_lines.push(Line::from(vec![
+                    Span::styled(
+                        format!("   {tag} "),
+                        Style::default().fg(app.theme.purple()),
+                    ),
+                    Span::styled(
+                        format!("({count})"),
+                        Style::default().fg(app.theme.gray()),
+                    ),
+                ]));
+            }
+        }
+
+        let stats_box = Paragraph::new(stats_lines).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(app.theme.yellow())),
+        );
+        f.render_widget(stats_box, right_layout[2]);
     }
 }
