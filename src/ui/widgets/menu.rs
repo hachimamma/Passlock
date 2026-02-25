@@ -29,9 +29,9 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
     let left_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),                  // title
+            Constraint::Length(3),              // title
             Constraint::Length(sysinfo_height), // system info and crypto
-            Constraint::Min(20),                    // menu
+            Constraint::Min(20),                // menu
         ])
         .split(main_layout[0]);
 
@@ -57,11 +57,19 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
         let with_2fa = vault.e.iter().filter(|e| e.totp_secret.is_some()).count();
         let tags = app.all_tags.len();
         let cipher = vault_ffi::get_cipher();
-        
+
         let cipher_display = if info_rl[0].width < 30 {
-            if vault_ffi::aes_sup() { "AES-256-GCM" } else { "ChaCha20-Poly1305" }
+            if vault_ffi::aes_sup() {
+                "AES-256-GCM"
+            } else {
+                "ChaCha20-Poly1305"
+            }
         } else if info_rl[0].width < 45 {
-            if vault_ffi::aes_sup() { "AES-256-GCM (HW)" } else { "ChaCha20-Poly1305" }
+            if vault_ffi::aes_sup() {
+                "AES-256-GCM (HW)"
+            } else {
+                "ChaCha20-Poly1305"
+            }
         } else {
             cipher
         };
@@ -203,11 +211,11 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
             let prefix = if is_selected { "▶ " } else { "  " };
 
             let mut lines = vec![];
-            
+
             if i == 0 {
                 lines.push(Line::from(""));
             }
-            
+
             lines.extend(vec![
                 Line::from(vec![
                     Span::styled(prefix, Style::default().fg(app.theme.yellow())),
@@ -226,7 +234,7 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
                 Line::from(""),
                 Line::from(""),
             ]);
-            
+
             ListItem::new(lines)
         })
         .collect();
