@@ -24,13 +24,13 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
         .split(size);
 
     let has_vault = app.vault.is_some();
-    let system_info_height = if has_vault { 8 } else { 4 };
+    let sysinfo_height = if has_vault { 8 } else { 4 };
 
     let left_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(3),                  // title
-            Constraint::Length(system_info_height), // system info and crypto
+            Constraint::Length(sysinfo_height), // system info and crypto
             Constraint::Min(20),                    // menu
         ])
         .split(main_layout[0]);
@@ -44,7 +44,7 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
     .alignment(Alignment::Center);
     f.render_widget(title, left_layout[0]);
 
-    let info_row_layout = Layout::default()
+    let info_rl = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
             Constraint::Percentage(55), // system info
@@ -57,6 +57,14 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
         let with_2fa = vault.e.iter().filter(|e| e.totp_secret.is_some()).count();
         let tags = app.all_tags.len();
         let cipher = vault_ffi::get_cipher();
+        
+        let cipher_display = if info_rl[0].width < 30 {
+            if vault_ffi::aes_sup() { "AES-256-GCM" } else { "ChaCha20-Poly1305" }
+        } else if info_rl[0].width < 45 {
+            if vault_ffi::aes_sup() { "AES-256-GCM (HW)" } else { "ChaCha20-Poly1305" }
+        } else {
+            cipher
+        };
 
         let info_lines = vec![
             Line::from(vec![Span::styled(
@@ -85,7 +93,7 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
                         .fg(app.theme.gray())
                         .add_modifier(Modifier::BOLD),
                 ),
-                Span::styled(cipher, Style::default().fg(app.theme.purple())),
+                Span::styled(cipher_display, Style::default().fg(app.theme.purple())),
             ]),
             Line::from(vec![
                 Span::styled(
@@ -116,7 +124,7 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
                 .border_type(BorderType::Rounded)
                 .border_style(Style::default().fg(app.theme.aqua())),
         );
-        f.render_widget(info_box, info_row_layout[0]);
+        f.render_widget(info_box, info_rl[0]);
 
         let is_aes = vault_ffi::aes_sup();
         let crypto_lines = vec![
@@ -163,7 +171,7 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
                     .border_type(BorderType::Rounded)
                     .border_style(Style::default().fg(app.theme.red())),
             );
-        f.render_widget(crypto_box, info_row_layout[1]);
+        f.render_widget(crypto_box, info_rl[1]);
     }
 
     let all_items = [
@@ -194,7 +202,13 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
 
             let prefix = if is_selected { "▶ " } else { "  " };
 
-            ListItem::new(vec![
+            let mut lines = vec![];
+            
+            if i == 0 {
+                lines.push(Line::from(""));
+            }
+            
+            lines.extend(vec![
                 Line::from(vec![
                     Span::styled(prefix, Style::default().fg(app.theme.yellow())),
                     Span::styled(
@@ -210,7 +224,10 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
                     Span::styled(*desc, Style::default().fg(app.theme.gray())),
                 ]),
                 Line::from(""),
-            ])
+                Line::from(""),
+            ]);
+            
+            ListItem::new(lines)
         })
         .collect();
 
