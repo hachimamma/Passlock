@@ -217,24 +217,32 @@ pub fn draw_gen_pwd(f: &mut Frame, size: Rect, app: &App) {
         .direction(Direction::Vertical)
         .margin(2)
         .constraints([
-            Constraint::Length(3),
-            Constraint::Length(3),
-            Constraint::Length(6),
-            Constraint::Min(1),
-            Constraint::Length(3),
+            Constraint::Length(3),  // title
+            Constraint::Length(1),  // spacer
+            Constraint::Length(3),  // length input
+            Constraint::Min(5),     // gen pwd area
+            Constraint::Length(1),  // spacer
         ])
         .split(area);
+        
     let block = Block::default()
         .borders(Borders::ALL)
+        .border_type(ratatui::widgets::BorderType::Rounded)
         .border_style(Style::default().fg(app.theme.aqua()))
-        .title("═══ GENERATE PASSWORD ═══")
-        .title_alignment(Alignment::Center)
+        .title(Span::styled(
+            " [ Generate Password ] ",
+            Style::default()
+                .fg(app.theme.aqua())
+                .add_modifier(Modifier::BOLD),
+        ))
         .style(Style::default().bg(app.theme.bg0()));
     f.render_widget(block, area);
+    
     let title = Paragraph::new("Enter password length (4-64)")
         .style(Style::default().fg(app.theme.yellow()))
         .alignment(Alignment::Center);
     f.render_widget(title, chunks[0]);
+    
     let length_input = Paragraph::new(format!(
         "Length: {}",
         if app.input_buffer.is_empty() {
@@ -247,8 +255,16 @@ pub fn draw_gen_pwd(f: &mut Frame, size: Rect, app: &App) {
         Style::default()
             .fg(app.theme.green())
             .add_modifier(Modifier::BOLD),
-    );
-    f.render_widget(length_input, chunks[1]);
+    )
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_type(ratatui::widgets::BorderType::Rounded)
+            .border_style(Style::default().fg(app.theme.gray()))
+    )
+    .alignment(Alignment::Center);
+    f.render_widget(length_input, chunks[2]);
+    
     if !app.gen_pwd.is_empty() {
         let generated = Paragraph::new(vec![
             Line::from(""),
@@ -264,13 +280,15 @@ pub fn draw_gen_pwd(f: &mut Frame, size: Rect, app: &App) {
                     .add_modifier(Modifier::BOLD),
             )),
         ])
-        .alignment(Alignment::Center);
-        f.render_widget(generated, chunks[2]);
+        .alignment(Alignment::Center)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(ratatui::widgets::BorderType::Rounded)
+                .border_style(Style::default().fg(app.theme.green()))
+        );
+        f.render_widget(generated, chunks[3]);
     }
-    let help = Paragraph::new("| Enter: Generate │ Esc: Back |")
-        .style(Style::default().fg(app.theme.gray()))
-        .alignment(Alignment::Center);
-    f.render_widget(help, chunks[4]);
 }
 
 pub fn draw_filter_tags(f: &mut Frame, size: Rect, app: &App) {
@@ -293,7 +311,7 @@ pub fn draw_filter_tags(f: &mut Frame, size: Rect, app: &App) {
         .constraints([
             Constraint::Length(3),  // status or active filter
             Constraint::Length(1),  // spacer
-            Constraint::Min(5),     // tags list
+            Constraint::Min(5),     // tags filter
         ])
         .split(size);
 
@@ -431,7 +449,6 @@ pub fn draw_theme_selector(f: &mut Frame, area: Rect, app: &App) {
         .constraints([
             Constraint::Length(3),
             Constraint::Min(10),
-            Constraint::Length(3),
         ])
         .split(area);
 
@@ -445,6 +462,7 @@ pub fn draw_theme_selector(f: &mut Frame, area: Rect, app: &App) {
         .block(
             Block::default()
                 .borders(Borders::ALL)
+                .border_type(ratatui::widgets::BorderType::Rounded)
                 .border_style(Style::default().fg(app.theme.aqua())),
         );
     f.render_widget(title, chunks[0]);
@@ -493,8 +511,12 @@ pub fn draw_theme_selector(f: &mut Frame, area: Rect, app: &App) {
     let list = List::new(items).block(
         Block::default()
             .borders(Borders::ALL)
+            .border_type(ratatui::widgets::BorderType::Rounded)
             .border_style(Style::default().fg(app.theme.blue()))
-            .title(" Themes "),
+            .title(Span::styled(
+                " Themes ",
+                Style::default().fg(app.theme.blue()).add_modifier(Modifier::BOLD),
+            )),
     );
     f.render_widget(list, content_chunks[0]);
 
@@ -512,30 +534,31 @@ pub fn draw_theme_selector(f: &mut Frame, area: Rect, app: &App) {
         Line::from(""),
         Line::from(vec![Span::styled(
             "Colors:",
-            Style::default().fg(app.theme.gray()),
+            Style::default().fg(app.theme.gray()).add_modifier(Modifier::BOLD),
         )]),
+        Line::from(""),
         Line::from(vec![
-            Span::raw("  Red:    "),
+            Span::raw("  Red     "),
             Span::styled("███", Style::default().fg(preview_theme.red())),
         ]),
         Line::from(vec![
-            Span::raw("  Green:  "),
+            Span::raw("  Green   "),
             Span::styled("███", Style::default().fg(preview_theme.green())),
         ]),
         Line::from(vec![
-            Span::raw("  Yellow: "),
+            Span::raw("  Yellow  "),
             Span::styled("███", Style::default().fg(preview_theme.yellow())),
         ]),
         Line::from(vec![
-            Span::raw("  Blue:   "),
+            Span::raw("  Blue    "),
             Span::styled("███", Style::default().fg(preview_theme.blue())),
         ]),
         Line::from(vec![
-            Span::raw("  Purple: "),
+            Span::raw("  Purple  "),
             Span::styled("███", Style::default().fg(preview_theme.purple())),
         ]),
         Line::from(vec![
-            Span::raw("  Aqua:   "),
+            Span::raw("  Aqua    "),
             Span::styled("███", Style::default().fg(preview_theme.aqua())),
         ]),
     ];
@@ -544,28 +567,15 @@ pub fn draw_theme_selector(f: &mut Frame, area: Rect, app: &App) {
         .block(
             Block::default()
                 .borders(Borders::ALL)
+                .border_type(ratatui::widgets::BorderType::Rounded)
                 .border_style(Style::default().fg(app.theme.purple()))
-                .title(" Preview "),
+                .title(Span::styled(
+                    " Preview ",
+                    Style::default().fg(app.theme.purple()).add_modifier(Modifier::BOLD),
+                )),
         )
         .alignment(Alignment::Left);
     f.render_widget(preview, content_chunks[1]);
-
-    let help_text = vec![
-        Span::styled("Enter", Style::default().fg(app.theme.green())),
-        Span::raw(": Apply  "),
-        Span::styled("Esc", Style::default().fg(app.theme.red())),
-        Span::raw(": Cancel"),
-    ];
-
-    let help = Paragraph::new(Line::from(help_text))
-        .style(Style::default().fg(app.theme.gray()))
-        .alignment(Alignment::Center)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(app.theme.gray())),
-        );
-    f.render_widget(help, chunks[2]);
 }
 
 #[allow(clippy::too_many_lines)]
@@ -707,9 +717,14 @@ pub fn draw_settings_screen(f: &mut Frame, area: Rect, app: &App) {
 
     let block = Block::default()
         .borders(Borders::ALL)
+        .border_type(ratatui::widgets::BorderType::Rounded)
         .border_style(Style::default().fg(app.theme.blue()))
-        .title("═══ SETTINGS ═══")
-        .title_alignment(Alignment::Center)
+        .title(Span::styled(
+            " [ Settings ] ",
+            Style::default()
+                .fg(app.theme.blue())
+                .add_modifier(Modifier::BOLD),
+        ))
         .style(Style::default().bg(app.theme.bg0()));
 
     let inner = block.inner(centered_area);
@@ -718,7 +733,10 @@ pub fn draw_settings_screen(f: &mut Frame, area: Rect, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(2)
-        .constraints([Constraint::Length(3), Constraint::Min(5), Constraint::Length(3)])
+        .constraints([
+            Constraint::Length(3),
+            Constraint::Min(5),
+        ])
         .split(inner);
 
     let title = Paragraph::new("Preferences")
@@ -777,12 +795,6 @@ pub fn draw_settings_screen(f: &mut Frame, area: Rect, app: &App) {
 
     let list = List::new(list_items);
     f.render_widget(list, chunks[1]);
-    
-    let help_text = "Press number or Enter to select | ↑↓: Navigate | Esc: Back";
-    let help = Paragraph::new(help_text)
-        .style(Style::default().fg(app.theme.gray()))
-        .alignment(Alignment::Center);
-    f.render_widget(help, chunks[2]);
 }
 
 #[allow(clippy::too_many_lines)]
@@ -791,9 +803,14 @@ pub fn draw_help_screen(f: &mut Frame, area: Rect, app: &App) {
 
     let block = Block::default()
         .borders(Borders::ALL)
+        .border_type(ratatui::widgets::BorderType::Rounded)
         .border_style(Style::default().fg(app.theme.green()))
-        .title("═══ PASSLOCK HELP ═══")
-        .title_alignment(Alignment::Center)
+        .title(Span::styled(
+            " [ PassLock Help ] ",
+            Style::default()
+                .fg(app.theme.green())
+                .add_modifier(Modifier::BOLD),
+        ))
         .style(Style::default().bg(app.theme.bg0()));
 
     let inner = block.inner(area);
