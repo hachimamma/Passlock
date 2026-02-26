@@ -27,6 +27,7 @@ pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
         .split(popup_layout[1])[1]
 }
 
+#[allow(clippy::too_many_lines)]
 pub fn draw_search_pwd(f: &mut Frame, size: Rect, app: &App) {
     let block = Block::default()
         .borders(Borders::ALL)
@@ -45,9 +46,9 @@ pub fn draw_search_pwd(f: &mut Frame, size: Rect, app: &App) {
         .direction(Direction::Vertical)
         .margin(2)
         .constraints([
-            Constraint::Length(3),  // search bar
-            Constraint::Length(1),  // spacer
-            Constraint::Min(5),     // results
+            Constraint::Length(3), // search bar
+            Constraint::Length(1), // spacer
+            Constraint::Min(5),    // results
         ])
         .split(size);
 
@@ -64,13 +65,18 @@ pub fn draw_search_pwd(f: &mut Frame, size: Rect, app: &App) {
             " Search ",
             Style::default().fg(app.theme.yellow()),
         ));
-    
+
     let search_text = if app.search_query.is_empty() {
         Span::styled("Type to search...", Style::default().fg(app.theme.gray()))
     } else {
-        Span::styled(&app.search_query, Style::default().fg(app.theme.green()).add_modifier(Modifier::BOLD))
+        Span::styled(
+            &app.search_query,
+            Style::default()
+                .fg(app.theme.green())
+                .add_modifier(Modifier::BOLD),
+        )
     };
-    
+
     let search_widget = Paragraph::new(search_text)
         .block(search_block)
         .alignment(Alignment::Left);
@@ -80,12 +86,20 @@ pub fn draw_search_pwd(f: &mut Frame, size: Rect, app: &App) {
         let tips_area = centered_rect(70, 30, chunks[2]);
         let tips = Paragraph::new(vec![
             Line::from(""),
-            Line::from(Span::styled("Quick Search Tips", Style::default().fg(app.theme.yellow()).add_modifier(Modifier::BOLD))),
+            Line::from(Span::styled(
+                "Quick Search Tips",
+                Style::default()
+                    .fg(app.theme.yellow())
+                    .add_modifier(Modifier::BOLD),
+            )),
             Line::from(""),
             Line::from(vec![
                 Span::styled("• ", Style::default().fg(app.theme.orange())),
                 Span::raw("Search by "),
-                Span::styled("name, username, URL, or tags", Style::default().fg(app.theme.green())),
+                Span::styled(
+                    "name, username, URL, or tags",
+                    Style::default().fg(app.theme.green()),
+                ),
             ]),
             Line::from(vec![
                 Span::styled("• ", Style::default().fg(app.theme.orange())),
@@ -104,23 +118,31 @@ pub fn draw_search_pwd(f: &mut Frame, size: Rect, app: &App) {
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(ratatui::widgets::BorderType::Rounded)
-                .border_style(Style::default().fg(app.theme.aqua()))
+                .border_style(Style::default().fg(app.theme.aqua())),
         );
         f.render_widget(tips, tips_area);
     } else if app.entry_disp.is_empty() {
         let empty_area = centered_rect(60, 20, chunks[2]);
         let empty = Paragraph::new(vec![
             Line::from(""),
-            Line::from(Span::styled("No matches found", Style::default().fg(app.theme.gray()).add_modifier(Modifier::BOLD))),
+            Line::from(Span::styled(
+                "No matches found",
+                Style::default()
+                    .fg(app.theme.gray())
+                    .add_modifier(Modifier::BOLD),
+            )),
             Line::from(""),
-            Line::from(Span::styled("Try a different search term", Style::default().fg(app.theme.gray()))),
+            Line::from(Span::styled(
+                "Try a different search term",
+                Style::default().fg(app.theme.gray()),
+            )),
         ])
         .alignment(Alignment::Center)
         .block(
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(ratatui::widgets::BorderType::Rounded)
-                .border_style(Style::default().fg(app.theme.gray()))
+                .border_style(Style::default().fg(app.theme.gray())),
         );
         f.render_widget(empty, empty_area);
     } else if !app.entry_disp.is_empty() {
@@ -143,14 +165,14 @@ pub fn draw_search_pwd(f: &mut Frame, size: Rect, app: &App) {
                         Span::styled(&entry.u, Style::default().fg(app.theme.blue())),
                     ]),
                 ];
-                
+
                 if let Some(ref url) = entry.url {
                     lines.push(Line::from(vec![
                         Span::styled("  URL: ", Style::default().fg(app.theme.gray())),
                         Span::styled(url, Style::default().fg(app.theme.aqua())),
                     ]));
                 }
-                
+
                 if !entry.tags.is_empty() {
                     lines.push(Line::from(vec![
                         Span::styled("  Tags: ", Style::default().fg(app.theme.gray())),
@@ -160,12 +182,12 @@ pub fn draw_search_pwd(f: &mut Frame, size: Rect, app: &App) {
                         ),
                     ]));
                 }
-                
+
                 lines.push(Line::from(""));
                 ListItem::new(lines)
             })
             .collect();
-        
+
         let list = List::new(items).block(
             Block::default()
                 .borders(Borders::ALL)
@@ -173,20 +195,30 @@ pub fn draw_search_pwd(f: &mut Frame, size: Rect, app: &App) {
                 .border_style(Style::default().fg(app.theme.green()))
                 .title(Span::styled(
                     format!(" [ {} Results ] ", app.entry_disp.len()),
-                    Style::default().fg(app.theme.green()).add_modifier(Modifier::BOLD),
-                ))
+                    Style::default()
+                        .fg(app.theme.green())
+                        .add_modifier(Modifier::BOLD),
+                )),
         );
         f.render_widget(list, chunks[2]);
     } else {
         let tips_area = centered_rect(70, 30, chunks[2]);
         let tips = Paragraph::new(vec![
             Line::from(""),
-            Line::from(Span::styled("Quick Search Tips", Style::default().fg(app.theme.yellow()).add_modifier(Modifier::BOLD))),
+            Line::from(Span::styled(
+                "Quick Search Tips",
+                Style::default()
+                    .fg(app.theme.yellow())
+                    .add_modifier(Modifier::BOLD),
+            )),
             Line::from(""),
             Line::from(vec![
                 Span::styled("• ", Style::default().fg(app.theme.orange())),
                 Span::raw("Search by "),
-                Span::styled("name, username, URL, or tags", Style::default().fg(app.theme.green())),
+                Span::styled(
+                    "name, username, URL, or tags",
+                    Style::default().fg(app.theme.green()),
+                ),
             ]),
             Line::from(vec![
                 Span::styled("• ", Style::default().fg(app.theme.orange())),
@@ -205,7 +237,7 @@ pub fn draw_search_pwd(f: &mut Frame, size: Rect, app: &App) {
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(ratatui::widgets::BorderType::Rounded)
-                .border_style(Style::default().fg(app.theme.aqua()))
+                .border_style(Style::default().fg(app.theme.aqua())),
         );
         f.render_widget(tips, tips_area);
     }
@@ -217,14 +249,14 @@ pub fn draw_gen_pwd(f: &mut Frame, size: Rect, app: &App) {
         .direction(Direction::Vertical)
         .margin(2)
         .constraints([
-            Constraint::Length(3),  // title
-            Constraint::Length(1),  // spacer
-            Constraint::Length(3),  // length input
-            Constraint::Min(5),     // gen pwd area
-            Constraint::Length(1),  // spacer
+            Constraint::Length(3), // title
+            Constraint::Length(1), // spacer
+            Constraint::Length(3), // length input
+            Constraint::Min(5),    // gen pwd area
+            Constraint::Length(1), // spacer
         ])
         .split(area);
-        
+
     let block = Block::default()
         .borders(Borders::ALL)
         .border_type(ratatui::widgets::BorderType::Rounded)
@@ -237,12 +269,12 @@ pub fn draw_gen_pwd(f: &mut Frame, size: Rect, app: &App) {
         ))
         .style(Style::default().bg(app.theme.bg0()));
     f.render_widget(block, area);
-    
+
     let title = Paragraph::new("Enter password length (4-64)")
         .style(Style::default().fg(app.theme.yellow()))
         .alignment(Alignment::Center);
     f.render_widget(title, chunks[0]);
-    
+
     let length_input = Paragraph::new(format!(
         "Length: {}",
         if app.input_buffer.is_empty() {
@@ -260,11 +292,11 @@ pub fn draw_gen_pwd(f: &mut Frame, size: Rect, app: &App) {
         Block::default()
             .borders(Borders::ALL)
             .border_type(ratatui::widgets::BorderType::Rounded)
-            .border_style(Style::default().fg(app.theme.gray()))
+            .border_style(Style::default().fg(app.theme.gray())),
     )
     .alignment(Alignment::Center);
     f.render_widget(length_input, chunks[2]);
-    
+
     if !app.gen_pwd.is_empty() {
         let generated = Paragraph::new(vec![
             Line::from(""),
@@ -285,12 +317,13 @@ pub fn draw_gen_pwd(f: &mut Frame, size: Rect, app: &App) {
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(ratatui::widgets::BorderType::Rounded)
-                .border_style(Style::default().fg(app.theme.green()))
+                .border_style(Style::default().fg(app.theme.green())),
         );
         f.render_widget(generated, chunks[3]);
     }
 }
 
+#[allow(clippy::too_many_lines)]
 pub fn draw_filter_tags(f: &mut Frame, size: Rect, app: &App) {
     let block = Block::default()
         .borders(Borders::ALL)
@@ -309,25 +342,31 @@ pub fn draw_filter_tags(f: &mut Frame, size: Rect, app: &App) {
         .direction(Direction::Vertical)
         .margin(2)
         .constraints([
-            Constraint::Length(3),  // status or active filter
-            Constraint::Length(1),  // spacer
-            Constraint::Min(5),     // tags filter
+            Constraint::Length(3), // status or active filter
+            Constraint::Length(1), // spacer
+            Constraint::Min(5),    // tags filter
         ])
         .split(size);
 
     if let Some(ref tag) = app.active_tf {
-        let status = Paragraph::new(vec![
-            Line::from(vec![
-                Span::styled("Active Filter: ", Style::default().fg(app.theme.gray())),
-                Span::styled(tag, Style::default().fg(app.theme.purple()).add_modifier(Modifier::BOLD)),
-                Span::styled(format!(" ({} entries)", app.entry_disp.len()), Style::default().fg(app.theme.aqua())),
-            ]),
-        ])
+        let status = Paragraph::new(vec![Line::from(vec![
+            Span::styled("Active Filter: ", Style::default().fg(app.theme.gray())),
+            Span::styled(
+                tag,
+                Style::default()
+                    .fg(app.theme.purple())
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                format!(" ({} entries)", app.entry_disp.len()),
+                Style::default().fg(app.theme.aqua()),
+            ),
+        ])])
         .block(
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(ratatui::widgets::BorderType::Rounded)
-                .border_style(Style::default().fg(app.theme.green()))
+                .border_style(Style::default().fg(app.theme.green())),
         )
         .alignment(Alignment::Center);
         f.render_widget(status, chunks[0]);
@@ -338,7 +377,7 @@ pub fn draw_filter_tags(f: &mut Frame, size: Rect, app: &App) {
                 Block::default()
                     .borders(Borders::ALL)
                     .border_type(ratatui::widgets::BorderType::Rounded)
-                    .border_style(Style::default().fg(app.theme.gray()))
+                    .border_style(Style::default().fg(app.theme.gray())),
             )
             .alignment(Alignment::Center);
         f.render_widget(status, chunks[0]);
@@ -348,16 +387,24 @@ pub fn draw_filter_tags(f: &mut Frame, size: Rect, app: &App) {
         let empty_area = centered_rect(60, 30, chunks[2]);
         let empty = Paragraph::new(vec![
             Line::from(""),
-            Line::from(Span::styled("No tags available", Style::default().fg(app.theme.gray()).add_modifier(Modifier::BOLD))),
+            Line::from(Span::styled(
+                "No tags available",
+                Style::default()
+                    .fg(app.theme.gray())
+                    .add_modifier(Modifier::BOLD),
+            )),
             Line::from(""),
-            Line::from(Span::styled("Add tags to your passwords first", Style::default().fg(app.theme.gray()))),
+            Line::from(Span::styled(
+                "Add tags to your passwords first",
+                Style::default().fg(app.theme.gray()),
+            )),
         ])
         .alignment(Alignment::Center)
         .block(
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(ratatui::widgets::BorderType::Rounded)
-                .border_style(Style::default().fg(app.theme.gray()))
+                .border_style(Style::default().fg(app.theme.gray())),
         );
         f.render_widget(empty, empty_area);
     } else {
@@ -386,13 +433,13 @@ pub fn draw_filter_tags(f: &mut Frame, size: Rect, app: &App) {
                     ),
                 ]),
                 Line::from(""),
-            ])
+            ]),
         ];
 
         for (idx, (tag, count)) in app.all_tags.iter().enumerate() {
             let is_selected = idx + 1 == app.select_tf;
-            let is_active = app.active_tf.as_ref().map_or(false, |t| t == tag);
-            
+            let is_active = app.active_tf.as_ref() == Some(tag);
+
             let prefix = if is_selected { "▶ " } else { "  " };
             let tag_style = if is_selected {
                 Style::default()
@@ -405,14 +452,14 @@ pub fn draw_filter_tags(f: &mut Frame, size: Rect, app: &App) {
             } else {
                 Style::default().fg(app.theme.fg())
             };
-            
+
             items.push(ListItem::new(vec![
                 Line::from(vec![
                     Span::styled(prefix, Style::default().fg(app.theme.yellow())),
-                    Span::styled(format!("[{}]", tag), tag_style),
+                    Span::styled(format!("[{tag}]"), tag_style),
                     Span::raw("  "),
                     Span::styled(
-                        format!("({} entries)", count),
+                        format!("({count} entries)"),
                         Style::default().fg(app.theme.gray()),
                     ),
                     if is_active {
@@ -432,8 +479,10 @@ pub fn draw_filter_tags(f: &mut Frame, size: Rect, app: &App) {
                 .border_style(Style::default().fg(app.theme.purple()))
                 .title(Span::styled(
                     format!(" [ {} Tags Available ] ", app.all_tags.len()),
-                    Style::default().fg(app.theme.aqua()).add_modifier(Modifier::BOLD),
-                ))
+                    Style::default()
+                        .fg(app.theme.aqua())
+                        .add_modifier(Modifier::BOLD),
+                )),
         );
         f.render_widget(list, chunks[2]);
     }
@@ -446,10 +495,7 @@ pub fn draw_theme_selector(f: &mut Frame, area: Rect, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(2)
-        .constraints([
-            Constraint::Length(3),
-            Constraint::Min(10),
-        ])
+        .constraints([Constraint::Length(3), Constraint::Min(10)])
         .split(area);
 
     let title = Paragraph::new("THEME SELECTOR")
@@ -515,7 +561,9 @@ pub fn draw_theme_selector(f: &mut Frame, area: Rect, app: &App) {
             .border_style(Style::default().fg(app.theme.blue()))
             .title(Span::styled(
                 " Themes ",
-                Style::default().fg(app.theme.blue()).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(app.theme.blue())
+                    .add_modifier(Modifier::BOLD),
             )),
     );
     f.render_widget(list, content_chunks[0]);
@@ -534,7 +582,9 @@ pub fn draw_theme_selector(f: &mut Frame, area: Rect, app: &App) {
         Line::from(""),
         Line::from(vec![Span::styled(
             "Colors:",
-            Style::default().fg(app.theme.gray()).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(app.theme.gray())
+                .add_modifier(Modifier::BOLD),
         )]),
         Line::from(""),
         Line::from(vec![
@@ -571,7 +621,9 @@ pub fn draw_theme_selector(f: &mut Frame, area: Rect, app: &App) {
                 .border_style(Style::default().fg(app.theme.purple()))
                 .title(Span::styled(
                     " Preview ",
-                    Style::default().fg(app.theme.purple()).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(app.theme.purple())
+                        .add_modifier(Modifier::BOLD),
                 )),
         )
         .alignment(Alignment::Left);
@@ -733,10 +785,7 @@ pub fn draw_settings_screen(f: &mut Frame, area: Rect, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(2)
-        .constraints([
-            Constraint::Length(3),
-            Constraint::Min(5),
-        ])
+        .constraints([Constraint::Length(3), Constraint::Min(5)])
         .split(inner);
 
     let title = Paragraph::new("Preferences")
@@ -754,10 +803,14 @@ pub fn draw_settings_screen(f: &mut Frame, area: Rect, app: &App) {
     } else {
         format!("{}s", app.clipboard_timeout)
     };
-    
+
     let items = [
         ("1", "Theme Selector", format!("Current: {current_theme}")),
-        ("2", "Clipboard Timeout", format!("Current: {clipboard_timeout_display}")),
+        (
+            "2",
+            "Clipboard Timeout",
+            format!("Current: {clipboard_timeout_display}"),
+        ),
         ("3", "Future Feature", "Coming soon".to_string()),
     ];
 
