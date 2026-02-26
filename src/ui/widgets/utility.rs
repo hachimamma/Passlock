@@ -76,7 +76,38 @@ pub fn draw_search_pwd(f: &mut Frame, size: Rect, app: &App) {
         .alignment(Alignment::Left);
     f.render_widget(search_widget, search_area);
 
-    if app.entry_disp.is_empty() && !app.search_query.is_empty() {
+    if app.search_query.is_empty() {
+        let tips_area = centered_rect(70, 30, chunks[2]);
+        let tips = Paragraph::new(vec![
+            Line::from(""),
+            Line::from(Span::styled("Quick Search Tips", Style::default().fg(app.theme.yellow()).add_modifier(Modifier::BOLD))),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("• ", Style::default().fg(app.theme.orange())),
+                Span::raw("Search by "),
+                Span::styled("name, username, URL, or tags", Style::default().fg(app.theme.green())),
+            ]),
+            Line::from(vec![
+                Span::styled("• ", Style::default().fg(app.theme.orange())),
+                Span::raw("Results update "),
+                Span::styled("as you type", Style::default().fg(app.theme.blue())),
+            ]),
+            Line::from(vec![
+                Span::styled("• ", Style::default().fg(app.theme.orange())),
+                Span::raw("Press "),
+                Span::styled("Enter", Style::default().fg(app.theme.purple())),
+                Span::raw(" to view detailed results"),
+            ]),
+        ])
+        .alignment(Alignment::Left)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(ratatui::widgets::BorderType::Rounded)
+                .border_style(Style::default().fg(app.theme.aqua()))
+        );
+        f.render_widget(tips, tips_area);
+    } else if app.entry_disp.is_empty() {
         let empty_area = centered_rect(60, 20, chunks[2]);
         let empty = Paragraph::new(vec![
             Line::from(""),
@@ -312,30 +343,33 @@ pub fn draw_filter_tags(f: &mut Frame, size: Rect, app: &App) {
         );
         f.render_widget(empty, empty_area);
     } else {
-        let mut items = vec![ListItem::new(vec![
-            Line::from(vec![
-                Span::styled(
-                    if app.select_tf == 0 { "▶ " } else { "  " },
-                    Style::default().fg(app.theme.yellow()),
-                ),
-                Span::styled(
-                    "[ALL]",
-                    if app.select_tf == 0 {
-                        Style::default()
-                            .fg(app.theme.green())
-                            .add_modifier(Modifier::BOLD)
-                    } else {
-                        Style::default().fg(app.theme.fg())
-                    },
-                ),
-                Span::raw("  "),
-                Span::styled(
-                    format!("({} total)", app.vault.as_ref().map_or(0, |v| v.e.len())),
-                    Style::default().fg(app.theme.gray()),
-                ),
-            ]),
-            Line::from(""),
-        ])];
+        let mut items = vec![
+            ListItem::new(vec![Line::from("")]),
+            ListItem::new(vec![
+                Line::from(vec![
+                    Span::styled(
+                        if app.select_tf == 0 { "▶ " } else { "  " },
+                        Style::default().fg(app.theme.yellow()),
+                    ),
+                    Span::styled(
+                        "[ALL]",
+                        if app.select_tf == 0 {
+                            Style::default()
+                                .fg(app.theme.green())
+                                .add_modifier(Modifier::BOLD)
+                        } else {
+                            Style::default().fg(app.theme.fg())
+                        },
+                    ),
+                    Span::raw("  "),
+                    Span::styled(
+                        format!("({} total)", app.vault.as_ref().map_or(0, |v| v.e.len())),
+                        Style::default().fg(app.theme.gray()),
+                    ),
+                ]),
+                Line::from(""),
+            ])
+        ];
 
         for (idx, (tag, count)) in app.all_tags.iter().enumerate() {
             let is_selected = idx + 1 == app.select_tf;
@@ -824,6 +858,10 @@ pub fn draw_help_screen(f: &mut Frame, area: Rect, app: &App) {
         Line::from(vec![
             Span::styled("  F         ", Style::default().fg(app.theme.orange())),
             Span::raw("Clear filters"),
+        ]),
+        Line::from(vec![
+            Span::styled("  V         ", Style::default().fg(app.theme.orange())),
+            Span::raw("View filtered passwords (when in Filter Tags screen)"),
         ]),
         Line::from(vec![
             Span::styled("  Esc       ", Style::default().fg(app.theme.orange())),
