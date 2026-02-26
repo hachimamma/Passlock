@@ -811,7 +811,7 @@ pub fn draw_settings_screen(f: &mut Frame, area: Rect, app: &App) {
             "Clipboard Timeout",
             format!("Current: {clipboard_timeout_display}"),
         ),
-        ("3", "Future Feature", "Coming soon".to_string()),
+        ("3", "Auto-Save", "Coming soon".to_string()),
     ];
 
     let list_items: Vec<ListItem> = items
