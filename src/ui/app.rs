@@ -50,6 +50,7 @@ pub struct App {
     pub n_entry_totp: String,
     pub show_totp_codes: bool,
     pub clipboard_timeout: u64,
+    pub menu_click_map: Vec<(u16, u16, u16, u16, usize)>,
 }
 
 impl App {
@@ -98,6 +99,7 @@ impl App {
             n_entry_totp: String::new(),
             show_totp_codes: true,
             clipboard_timeout: 30,
+            menu_click_map: Vec::new(),
         }
     }
 

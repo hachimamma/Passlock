@@ -11,7 +11,7 @@ use ratatui::{
 };
 
 #[allow(clippy::too_many_lines)]
-pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
+pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
     let block = Block::default()
         .borders(Borders::NONE)
         .style(Style::default().bg(app.theme.bg0()));
@@ -250,8 +250,33 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
                 .add_modifier(Modifier::BOLD),
         ));
 
+    let menu_area = left_layout[2];
+
+    // Mouse click execution
+    let menu_inner_area = menu_block.inner(menu_area);
+
     let menu = List::new(menu_list).block(menu_block);
-    f.render_widget(menu, left_layout[2]);
+    f.render_widget(menu, menu_area);
+
+    let mut current_y = menu_inner_area.y + 1;
+
+    app.menu_click_map.clear();
+
+    for i in 0..all_items.len() {
+        let item_height = 4u16;
+        let clickable_y_start = current_y;
+        let clickable_y_end = current_y + 1;
+
+        app.menu_click_map.push((
+            clickable_y_start,
+            clickable_y_end,
+            menu_inner_area.x,
+            menu_inner_area.x + menu_inner_area.width,
+            i,
+        ));
+
+        current_y += item_height;
+    }
 
     let right_layout = Layout::default()
         .direction(Direction::Vertical)

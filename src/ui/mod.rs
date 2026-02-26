@@ -208,6 +208,65 @@ fn run_app<B: ratatui::backend::Backend>(
                 MouseEventKind::Down(MouseButton::Left) => {
                     if app.context_menu_visible {
                         handle_context_menu_click(app, mouse_event.column, mouse_event.row);
+                    } else if app.screen == Screen::MainMenu {
+                        // ═══ HANDLE MAIN MENU CLICKS ═══
+                        let x = mouse_event.column;
+                        let y = mouse_event.row;
+
+                        for (y_start, y_end, x_start, x_end, menu_idx) in &app.menu_click_map {
+                            if y >= *y_start && y <= *y_end && x >= *x_start && x < *x_end {
+                                // Set selected menu item
+                                app.selected_menu = *menu_idx;
+                                app.msg.clear();
+
+                                // Trigger the menu action (same as pressing Enter)
+                                match *menu_idx {
+                                    0 => {
+                                        app.screen = Screen::ViewPasswords;
+                                        app.active_tf = None;
+                                        app.search_query.clear();
+                                        if let Some(ref vault) = app.vault {
+                                            app.entry_disp = vault.e.clone();
+                                        }
+                                    }
+                                    1 => {
+                                        app.screen = Screen::AddPassword;
+                                        app.ca_form();
+                                    }
+                                    2 => {
+                                        app.screen = Screen::SearchPassword;
+                                        app.search_query.clear();
+                                        app.entry_disp.clear();
+                                    }
+                                    3 => {
+                                        app.screen = Screen::FilterByTag;
+                                        app.select_tf = 0;
+                                        app.filter_bt(None);
+                                    }
+                                    4 => {
+                                        app.screen = Screen::GeneratePassword;
+                                        app.input_buffer = String::from("16");
+                                        app.gen_pwd.clear();
+                                    }
+                                    5 => {
+                                        app.screen = Screen::DeletePassword;
+                                        app.input_buffer.clear();
+                                        if app.entry_disp.is_empty() {
+                                            if let Some(ref vault) = app.vault {
+                                                app.entry_disp = vault.e.clone();
+                                            }
+                                        }
+                                    }
+                                    6 => {
+                                        app.should_quit = true;
+                                    }
+                                    _ => {}
+                                }
+                                break;
+                            }
+                        }
+
+                        app.context_menu_visible = false;
                     } else {
                         app.context_menu_visible = false;
                     }
