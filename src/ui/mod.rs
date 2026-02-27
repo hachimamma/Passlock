@@ -212,7 +212,6 @@ fn run_app<B: ratatui::backend::Backend>(
                         if app.context_menu_visible {
                             handle_context_menu_click(app, mouse_event.column, mouse_event.row);
                         } else if app.screen == Screen::MainMenu {
-                            // ═══ HANDLE MAIN MENU CLICKS ═══
                             let x = mouse_event.column;
                             let y = mouse_event.row;
 
@@ -267,21 +266,17 @@ fn run_app<B: ratatui::backend::Backend>(
                                 }
                             }
 
-                            // Check refresh rate control clicks
                             for (y_start, y_end, x_start, x_end) in &app.rr_cmap {
                                 if y >= *y_start && y < *y_end && x >= *x_start && x < *x_end {
-                                    // Get the center of the widget to determine left/right side
                                     let center_x = (x_start + x_end) / 2;
 
                                     if x < center_x {
-                                        // Left side - MINUS button
                                         app.rr_ms = (app.rr_ms.saturating_sub(50)).max(50);
                                         app.set_msg(
                                             &format!("Refresh: {}ms", app.rr_ms),
                                             screens::MessageType::Info,
                                         );
                                     } else {
-                                        // Right side - PLUS button
                                         app.rr_ms = (app.rr_ms + 50).min(1000);
                                         app.set_msg(
                                             &format!("Refresh: {}ms", app.rr_ms),
