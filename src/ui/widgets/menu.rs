@@ -11,7 +11,7 @@ use ratatui::{
 };
 
 #[allow(clippy::too_many_lines)]
-pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
+pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
     let block = Block::default()
         .borders(Borders::NONE)
         .style(Style::default().bg(app.theme.bg0()));
@@ -32,6 +32,7 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
             Constraint::Length(3),              // title
             Constraint::Length(sysinfo_height), // system info and crypto
             Constraint::Min(20),                // menu
+            Constraint::Length(3),              // refresh rate control
         ])
         .split(main_layout[0]);
 
@@ -250,8 +251,39 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
                 .add_modifier(Modifier::BOLD),
         ));
 
+    let menu_area = left_layout[2];
+
+    // Calculate inner area BEFORE moving menu_block
+    let menu_inner_area = menu_block.inner(menu_area);
+
     let menu = List::new(menu_list).block(menu_block);
-    f.render_widget(menu, left_layout[2]);
+    f.render_widget(menu, menu_area);
+
+    // ═══ MOUSE CLICK TRACKING FOR MENU ITEMS ═══
+    // Store clickable regions for mouse handling
+    // Each menu item takes 4 lines (title, desc, 2 blank lines), first item has extra blank line at top
+    let mut current_y = menu_inner_area.y + 1; // Start after the extra blank line before first item
+
+    // Clear previous menu click map
+    app.menu_click_map.clear();
+
+    for i in 0..all_items.len() {
+        let item_height = 4u16; // Each item: title line + desc line + 2 blank lines
+        let clickable_y_start = current_y;
+        let clickable_y_end = current_y + 1; // Title and description lines are clickable
+
+        // Store the clickable region: (y_start, y_end, x_start, x_end, menu_index)
+        // x_start and x_end define the horizontal bounds within the menu
+        app.menu_click_map.push((
+            clickable_y_start,
+            clickable_y_end,
+            menu_inner_area.x,
+            menu_inner_area.x + menu_inner_area.width,
+            i,
+        ));
+
+        current_y += item_height;
+    }
 
     let right_layout = Layout::default()
         .direction(Direction::Vertical)
@@ -414,4 +446,53 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &App) {
         );
         f.render_widget(stats_box, right_layout[2]);
     }
+
+    // Refresh rate control widget
+    let refresh_ms = app.rr_ms;
+    let refresh_area = left_layout[3];
+    let refresh_widget = Paragraph::new(Line::from(vec![
+        Span::styled("[ ", Style::default().fg(app.theme.gray())),
+        Span::styled(
+            "-",
+            Style::default()
+                .fg(app.theme.orange())
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(" ] ", Style::default().fg(app.theme.gray())),
+        Span::styled(
+            format!("{refresh_ms}ms"),
+            Style::default()
+                .fg(app.theme.green())
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(" [ ", Style::default().fg(app.theme.gray())),
+        Span::styled(
+            "+",
+            Style::default()
+                .fg(app.theme.orange())
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(" ]", Style::default().fg(app.theme.gray())),
+    ]))
+    .alignment(Alignment::Center)
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .border_style(Style::default().fg(app.theme.aqua()))
+            .title(Span::styled(
+                " Refresh Rate ",
+                Style::default().fg(app.theme.aqua()),
+            )),
+    );
+    f.render_widget(refresh_widget, refresh_area);
+
+    // Store clickable region for refresh rate control
+    app.rr_cmap.clear();
+    app.rr_cmap.push((
+        refresh_area.y,
+        refresh_area.y + refresh_area.height,
+        refresh_area.x,
+        refresh_area.x + refresh_area.width,
+    ));
 }

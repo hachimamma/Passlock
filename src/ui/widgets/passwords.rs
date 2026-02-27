@@ -42,7 +42,7 @@ pub fn draw_view_pwds(f: &mut Frame, size: Rect, app: &mut App) {
         String::new()
     };
 
-    let cb_stats = if let Some(expires_at) = app.clipboard_countdown {
+    let clipboard_status = if let Some(expires_at) = app.clipboard_countdown {
         let now = crate::get_timestamp();
         if expires_at > now {
             format!(" │ Clipboard: {}s", expires_at - now)
@@ -62,7 +62,7 @@ pub fn draw_view_pwds(f: &mut Frame, size: Rect, app: &mut App) {
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled(filter_status, Style::default().fg(app.theme.purple())),
-            Span::styled(cb_stats, Style::default().fg(app.theme.aqua())),
+            Span::styled(clipboard_status, Style::default().fg(app.theme.aqua())),
         ]),
         Line::from(""),
         Line::from(vec![Span::styled(
@@ -109,8 +109,8 @@ pub fn draw_view_pwds(f: &mut Frame, size: Rect, app: &mut App) {
         );
         f.render_widget(empty, empty_area);
     } else {
-        let ca_top = chunks[1].y;
-        let mut current_row = ca_top;
+        let content_area_top = chunks[1].y;
+        let mut current_row = content_area_top;
         let mut entry_lines_vec: Vec<Vec<Line>> = Vec::new();
 
         for (i, entry) in app.entry_disp.iter().enumerate() {
@@ -277,8 +277,8 @@ pub fn draw_add_pwd(f: &mut Frame, size: Rect, app: &App) {
             Constraint::Length(3), // 8: totp
             Constraint::Length(3), // 9: tags input
             Constraint::Length(3), // 10: Tags display
-            Constraint::Length(4), // 11: notes
-            Constraint::Min(1),    // 12: msg
+            Constraint::Min(4),    // 11: notes
+            Constraint::Length(3), // 12: msg
         ])
         .split(area);
 
@@ -364,10 +364,10 @@ pub fn draw_add_pwd(f: &mut Frame, size: Rect, app: &App) {
             strength.percentage,
             strength.strength
         );
-        let strenth_disp = Paragraph::new(bar)
+        let strength_display = Paragraph::new(bar)
             .style(Style::default().fg(strength_color))
             .alignment(Alignment::Center);
-        f.render_widget(strenth_disp, chunks[5]);
+        f.render_widget(strength_display, chunks[5]);
 
         if !strength.feedback.is_empty() {
             let feedback_text = format!("↳ {}", strength.feedback.join(", "));
@@ -440,20 +440,30 @@ pub fn draw_add_pwd(f: &mut Frame, size: Rect, app: &App) {
     f.render_widget(tags_input, chunks[9]);
 
     if !app.n_entry_tags.is_empty() {
-        let tags_disp = app
+        let tags_display = app
             .n_entry_tags
             .iter()
             .enumerate()
             .map(|(i, tag)| format!("[{}]{} ", i + 1, tag))
             .collect::<Vec<_>>()
             .join(" ");
-        let tags_widget = Paragraph::new(format!("Added: {tags_disp}"))
+        let tags_widget = Paragraph::new(format!("Added: {tags_display}"))
             .style(Style::default().fg(app.theme.orange()))
             .wrap(Wrap { trim: true });
         f.render_widget(tags_widget, chunks[10]);
     }
 
-    let notes = Paragraph::new(format!("Notes:\n{}", app.n_entry_notes))
+    let notes_lines: Vec<Line> = if app.n_entry_notes.is_empty() {
+        vec![Line::from("Notes:")]
+    } else {
+        let mut lines = vec![Line::from("Notes:")];
+        for line in app.n_entry_notes.lines() {
+            lines.push(Line::from(line.to_string()));
+        }
+        lines
+    };
+
+    let notes = Paragraph::new(notes_lines)
         .style(if app.add_fi == 6 {
             active_style
         } else {
@@ -517,8 +527,8 @@ pub fn draw_edit_pwd(f: &mut Frame, size: Rect, app: &App) {
             Constraint::Length(3), // 8: totp
             Constraint::Length(3), // 9: tags input
             Constraint::Length(3), // 10: tags display
-            Constraint::Length(4), // 11: notes
-            Constraint::Min(1),    // 12: msg
+            Constraint::Min(4),    // 11: notes
+            Constraint::Length(3), // 12: msg
         ])
         .split(area);
 
@@ -604,10 +614,10 @@ pub fn draw_edit_pwd(f: &mut Frame, size: Rect, app: &App) {
             strength.percentage,
             strength.strength
         );
-        let strenth_disp = Paragraph::new(bar)
+        let strength_display = Paragraph::new(bar)
             .style(Style::default().fg(strength_color))
             .alignment(Alignment::Center);
-        f.render_widget(strenth_disp, chunks[5]);
+        f.render_widget(strength_display, chunks[5]);
 
         if !strength.feedback.is_empty() {
             let feedback_text = format!("↳ {}", strength.feedback.join(", "));
@@ -680,20 +690,30 @@ pub fn draw_edit_pwd(f: &mut Frame, size: Rect, app: &App) {
     f.render_widget(tags_input, chunks[9]);
 
     if !app.n_entry_tags.is_empty() {
-        let tags_disp = app
+        let tags_display = app
             .n_entry_tags
             .iter()
             .enumerate()
             .map(|(i, tag)| format!("[{}]{} ", i + 1, tag))
             .collect::<Vec<_>>()
             .join(" ");
-        let tags_widget = Paragraph::new(format!("Tags: {tags_disp}"))
+        let tags_widget = Paragraph::new(format!("Tags: {tags_display}"))
             .style(Style::default().fg(app.theme.orange()))
             .wrap(Wrap { trim: true });
         f.render_widget(tags_widget, chunks[10]);
     }
 
-    let notes = Paragraph::new(format!("Notes:\n{}", app.n_entry_notes))
+    let notes_lines: Vec<Line> = if app.n_entry_notes.is_empty() {
+        vec![Line::from("Notes:")]
+    } else {
+        let mut lines = vec![Line::from("Notes:")];
+        for line in app.n_entry_notes.lines() {
+            lines.push(Line::from(line.to_string()));
+        }
+        lines
+    };
+
+    let notes = Paragraph::new(notes_lines)
         .style(if app.add_fi == 6 {
             active_style
         } else {
@@ -854,7 +874,7 @@ pub fn draw_del_pwd(f: &mut Frame, size: Rect, app: &App) {
         ])
         .split(size);
 
-    let title = Paragraph::new("Enter the number of the entry to delete")
+    let title = Paragraph::new("⚠ Enter the number of the entry to delete")
         .style(Style::default().fg(app.theme.orange()))
         .alignment(Alignment::Center)
         .block(
@@ -866,13 +886,13 @@ pub fn draw_del_pwd(f: &mut Frame, size: Rect, app: &App) {
     f.render_widget(title, chunks[0]);
 
     let empty_vec = Vec::new();
-    let entry_disp = if app.entry_disp.is_empty() {
+    let entries_to_display = if app.entry_disp.is_empty() {
         app.vault.as_ref().map_or(&empty_vec, |v| &v.e)
     } else {
         &app.entry_disp
     };
 
-    if entry_disp.is_empty() {
+    if entries_to_display.is_empty() {
         let empty_area = centered_rect(60, 20, chunks[1]);
         let empty = Paragraph::new(vec![
             Line::from(""),
@@ -892,7 +912,7 @@ pub fn draw_del_pwd(f: &mut Frame, size: Rect, app: &App) {
         );
         f.render_widget(empty, empty_area);
     } else {
-        let items: Vec<ListItem> = entry_disp
+        let items: Vec<ListItem> = entries_to_display
             .iter()
             .enumerate()
             .map(|(i, entry)| {

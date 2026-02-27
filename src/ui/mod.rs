@@ -177,120 +177,171 @@ fn run_app<B: ratatui::backend::Backend>(
 
         terminal.draw(|f| ui(f, app))?;
 
-        match event::read()? {
-            Event::Mouse(mouse_event) => match mouse_event.kind {
-                MouseEventKind::Down(MouseButton::Right) => {
-                    if app.screen == Screen::ViewPasswords || app.screen == Screen::SearchPassword {
-                        let y = mouse_event.row;
-                        let x = mouse_event.column;
+        if event::poll(std::time::Duration::from_millis(app.rr_ms))? {
+            match event::read()? {
+                Event::Mouse(mouse_event) => match mouse_event.kind {
+                    MouseEventKind::Down(MouseButton::Right) => {
+                        if app.screen == Screen::ViewPasswords
+                            || app.screen == Screen::SearchPassword
+                        {
+                            let y = mouse_event.row;
+                            let x = mouse_event.column;
 
-                        if (5..=170).contains(&x) {
-                            for (start_row, end_row, entry_idx) in &app.entry_row_map {
-                                if y >= *start_row && y <= *end_row {
-                                    app.context_menu_visible = true;
-                                    app.context_menu_entry_idx = *entry_idx;
-                                    app.context_menu_selected = 0;
+                            if (5..=170).contains(&x) {
+                                for (start_row, end_row, entry_idx) in &app.entry_row_map {
+                                    if y >= *start_row && y <= *end_row {
+                                        app.context_menu_visible = true;
+                                        app.context_menu_entry_idx = *entry_idx;
+                                        app.context_menu_selected = 0;
 
-                                    let term_width = 174u16;
-                                    let menu_width = 24u16;
-                                    app.context_menu_x = if x + menu_width > term_width {
-                                        term_width.saturating_sub(menu_width)
-                                    } else {
-                                        x
-                                    };
-                                    app.context_menu_y = y;
-                                    break;
+                                        let term_width = 174u16;
+                                        let menu_width = 24u16;
+                                        app.context_menu_x = if x + menu_width > term_width {
+                                            term_width.saturating_sub(menu_width)
+                                        } else {
+                                            x
+                                        };
+                                        app.context_menu_y = y;
+                                        break;
+                                    }
                                 }
                             }
                         }
                     }
-                }
-                MouseEventKind::Down(MouseButton::Left) => {
-                    if app.context_menu_visible {
-                        handle_context_menu_click(app, mouse_event.column, mouse_event.row);
-                    } else {
-                        app.context_menu_visible = false;
-                    }
-                }
-                MouseEventKind::ScrollUp => {
-                    if app.screen == Screen::ViewPasswords && app.selected_entry > 0 {
-                        app.selected_entry -= 1;
-                    }
-                }
-                MouseEventKind::ScrollDown => {
-                    if app.screen == Screen::ViewPasswords
-                        && app.selected_entry < app.entry_disp.len().saturating_sub(1)
-                    {
-                        app.selected_entry += 1;
-                    }
-                }
-                _ => {}
-            },
-            Event::Key(key_event) => {
-                if key_event.kind == KeyEventKind::Press {
-                    if app.context_menu_visible {
-                        use crate::ui::clipboard;
-                        use screens::MessageType;
-                        let timeout = app.clipboard_timeout;
+                    MouseEventKind::Down(MouseButton::Left) => {
+                        if app.context_menu_visible {
+                            handle_context_menu_click(app, mouse_event.column, mouse_event.row);
+                        } else if app.screen == Screen::MainMenu {
+                            // ═══ HANDLE MAIN MENU CLICKS ═══
+                            let x = mouse_event.column;
+                            let y = mouse_event.row;
 
-                        match key_event.code {
-                            KeyCode::Down => {
-                                if app.context_menu_selected < 4 {
-                                    app.context_menu_selected += 1;
+                            for (y_start, y_end, x_start, x_end, menu_idx) in &app.menu_click_map {
+                                if y >= *y_start && y <= *y_end && x >= *x_start && x < *x_end {
+                                    app.selected_menu = *menu_idx;
+                                    app.msg.clear();
+
+                                    match *menu_idx {
+                                        0 => {
+                                            app.screen = Screen::ViewPasswords;
+                                            app.active_tf = None;
+                                            app.search_query.clear();
+                                            if let Some(ref vault) = app.vault {
+                                                app.entry_disp = vault.e.clone();
+                                            }
+                                        }
+                                        1 => {
+                                            app.screen = Screen::AddPassword;
+                                            app.ca_form();
+                                        }
+                                        2 => {
+                                            app.screen = Screen::SearchPassword;
+                                            app.search_query.clear();
+                                            app.entry_disp.clear();
+                                        }
+                                        3 => {
+                                            app.screen = Screen::FilterByTag;
+                                            app.select_tf = 0;
+                                            app.filter_bt(None);
+                                        }
+                                        4 => {
+                                            app.screen = Screen::GeneratePassword;
+                                            app.input_buffer = String::from("16");
+                                            app.gen_pwd.clear();
+                                        }
+                                        5 => {
+                                            app.screen = Screen::DeletePassword;
+                                            app.input_buffer.clear();
+                                            if app.entry_disp.is_empty() {
+                                                if let Some(ref vault) = app.vault {
+                                                    app.entry_disp = vault.e.clone();
+                                                }
+                                            }
+                                        }
+                                        6 => {
+                                            app.should_quit = true;
+                                        }
+                                        _ => {}
+                                    }
+                                    break;
                                 }
                             }
-                            KeyCode::Up => {
-                                if app.context_menu_selected > 0 {
-                                    app.context_menu_selected -= 1;
+
+                            // Check refresh rate control clicks
+                            for (y_start, y_end, x_start, x_end) in &app.rr_cmap {
+                                if y >= *y_start && y < *y_end && x >= *x_start && x < *x_end {
+                                    // Get the center of the widget to determine left/right side
+                                    let center_x = (x_start + x_end) / 2;
+
+                                    if x < center_x {
+                                        // Left side - MINUS button
+                                        app.rr_ms = (app.rr_ms.saturating_sub(50)).max(50);
+                                        app.set_msg(
+                                            &format!("Refresh: {}ms", app.rr_ms),
+                                            screens::MessageType::Info,
+                                        );
+                                    } else {
+                                        // Right side - PLUS button
+                                        app.rr_ms = (app.rr_ms + 50).min(1000);
+                                        app.set_msg(
+                                            &format!("Refresh: {}ms", app.rr_ms),
+                                            screens::MessageType::Info,
+                                        );
+                                    }
+                                    break;
                                 }
                             }
-                            KeyCode::Enter => {
-                                let entry_idx = app.context_menu_entry_idx;
-                                if entry_idx >= app.entry_disp.len() {
-                                    app.context_menu_visible = false;
-                                    continue;
+
+                            app.context_menu_visible = false;
+                        } else {
+                            app.context_menu_visible = false;
+                        }
+                    }
+                    MouseEventKind::ScrollUp => {
+                        if app.screen == Screen::ViewPasswords && app.selected_entry > 0 {
+                            app.selected_entry -= 1;
+                        }
+                    }
+                    MouseEventKind::ScrollDown => {
+                        if app.screen == Screen::ViewPasswords
+                            && app.selected_entry < app.entry_disp.len().saturating_sub(1)
+                        {
+                            app.selected_entry += 1;
+                        }
+                    }
+                    _ => {}
+                },
+                Event::Key(key_event) => {
+                    if key_event.kind == KeyEventKind::Press {
+                        if app.context_menu_visible {
+                            use crate::ui::clipboard;
+                            use screens::MessageType;
+                            let timeout = app.clipboard_timeout;
+
+                            match key_event.code {
+                                KeyCode::Down => {
+                                    if app.context_menu_selected < 4 {
+                                        app.context_menu_selected += 1;
+                                    }
                                 }
-
-                                let entry = app.entry_disp[entry_idx].clone();
-
-                                match app.context_menu_selected {
-                                    0 => {
-                                        let result =
-                                            clipboard::copy_with_timeout(&entry.p, timeout);
-                                        app.clipboard_countdown = if result.success {
-                                            Some(result.expires_at)
-                                        } else {
-                                            None
-                                        };
-                                        app.set_msg(
-                                            &result.message,
-                                            if result.success {
-                                                MessageType::Success
-                                            } else {
-                                                MessageType::Error
-                                            },
-                                        );
+                                KeyCode::Up => {
+                                    if app.context_menu_selected > 0 {
+                                        app.context_menu_selected -= 1;
                                     }
-                                    1 => {
-                                        let result =
-                                            clipboard::copy_with_timeout(&entry.u, timeout);
-                                        app.clipboard_countdown = if result.success {
-                                            Some(result.expires_at)
-                                        } else {
-                                            None
-                                        };
-                                        app.set_msg(
-                                            &result.message,
-                                            if result.success {
-                                                MessageType::Success
-                                            } else {
-                                                MessageType::Error
-                                            },
-                                        );
+                                }
+                                KeyCode::Enter => {
+                                    let entry_idx = app.context_menu_entry_idx;
+                                    if entry_idx >= app.entry_disp.len() {
+                                        app.context_menu_visible = false;
+                                        continue;
                                     }
-                                    2 => {
-                                        if let Some(ref url) = entry.url {
-                                            let result = clipboard::copy_with_timeout(url, timeout);
+
+                                    let entry = app.entry_disp[entry_idx].clone();
+
+                                    match app.context_menu_selected {
+                                        0 => {
+                                            let result =
+                                                clipboard::copy_with_timeout(&entry.p, timeout);
                                             app.clipboard_countdown = if result.success {
                                                 Some(result.expires_at)
                                             } else {
@@ -304,81 +355,117 @@ fn run_app<B: ratatui::backend::Backend>(
                                                     MessageType::Error
                                                 },
                                             );
-                                        } else {
+                                        }
+                                        1 => {
+                                            let result =
+                                                clipboard::copy_with_timeout(&entry.u, timeout);
+                                            app.clipboard_countdown = if result.success {
+                                                Some(result.expires_at)
+                                            } else {
+                                                None
+                                            };
                                             app.set_msg(
-                                                "No URL for this entry!",
-                                                MessageType::Error,
+                                                &result.message,
+                                                if result.success {
+                                                    MessageType::Success
+                                                } else {
+                                                    MessageType::Error
+                                                },
                                             );
                                         }
+                                        2 => {
+                                            if let Some(ref url) = entry.url {
+                                                let result =
+                                                    clipboard::copy_with_timeout(url, timeout);
+                                                app.clipboard_countdown = if result.success {
+                                                    Some(result.expires_at)
+                                                } else {
+                                                    None
+                                                };
+                                                app.set_msg(
+                                                    &result.message,
+                                                    if result.success {
+                                                        MessageType::Success
+                                                    } else {
+                                                        MessageType::Error
+                                                    },
+                                                );
+                                            } else {
+                                                app.set_msg(
+                                                    "No URL for this entry!",
+                                                    MessageType::Error,
+                                                );
+                                            }
+                                        }
+                                        3 => {
+                                            let entry_id = entry.id.clone();
+                                            app.load_efe(&entry_id);
+                                        }
+                                        4 => {
+                                            app.selected_entry = entry_idx;
+                                            app.screen = Screen::ViewHistory;
+                                        }
+                                        _ => {}
                                     }
-                                    3 => {
-                                        let entry_id = entry.id.clone();
-                                        app.load_efe(&entry_id);
-                                    }
-                                    4 => {
-                                        app.selected_entry = entry_idx;
-                                        app.screen = Screen::ViewHistory;
-                                    }
-                                    _ => {}
+                                    app.context_menu_visible = false;
                                 }
-                                app.context_menu_visible = false;
+                                _ => {
+                                    app.context_menu_visible = false;
+                                }
                             }
-                            _ => {
-                                app.context_menu_visible = false;
-                            }
+                            continue;
                         }
-                        continue;
-                    }
 
-                    match app.screen {
-                        Screen::VaultCheck => {}
-                        Screen::CreateVault => handle_cvi(app, key_event.code),
-                        Screen::UnlockVault => handle_uvi(app, key_event.code),
-                        Screen::MainMenu => {
-                            if handle_mmi(app, key_event.code) {
-                                return Ok(());
+                        match app.screen {
+                            Screen::VaultCheck => {}
+                            Screen::CreateVault => handle_cvi(app, key_event.code),
+                            Screen::UnlockVault => handle_uvi(app, key_event.code),
+                            Screen::MainMenu => {
+                                if handle_mmi(app, key_event.code) {
+                                    return Ok(());
+                                }
                             }
-                        }
-                        Screen::ViewPasswords => handle_vpi(app, key_event.code),
-                        Screen::AddPassword => {
-                            if key_event.code == KeyCode::Char('s')
-                                && key_event
-                                    .modifiers
-                                    .contains(crossterm::event::KeyModifiers::CONTROL)
-                            {
-                                app.add_entry();
-                            } else {
-                                handle_api(app, key_event.code);
+                            Screen::ViewPasswords => handle_vpi(app, key_event.code),
+                            Screen::AddPassword => {
+                                if key_event.code == KeyCode::Char('s')
+                                    && key_event
+                                        .modifiers
+                                        .contains(crossterm::event::KeyModifiers::CONTROL)
+                                {
+                                    app.add_entry();
+                                } else {
+                                    handle_api(app, key_event.code);
+                                }
                             }
-                        }
-                        Screen::EditPassword => {
-                            if key_event.code == KeyCode::Char('s')
-                                && key_event
-                                    .modifiers
-                                    .contains(crossterm::event::KeyModifiers::CONTROL)
-                            {
-                                app.edit_entry();
-                            } else {
-                                handle_epi(app, key_event.code);
+                            Screen::EditPassword => {
+                                if key_event.code == KeyCode::Char('s')
+                                    && key_event
+                                        .modifiers
+                                        .contains(crossterm::event::KeyModifiers::CONTROL)
+                                {
+                                    app.edit_entry();
+                                } else {
+                                    handle_epi(app, key_event.code);
+                                }
                             }
-                        }
-                        Screen::ViewHistory => handle_vhi(app, key_event.code),
-                        Screen::SearchPassword => handle_si(app, key_event.code),
-                        Screen::GeneratePassword => handle_gi(app, key_event.code),
-                        Screen::DeletePassword => handle_di(app, key_event.code),
-                        Screen::FilterByTag => handle_tfi(app, key_event.code),
-                        Screen::ThemeSelector => handle_theme_selector(app, key_event.code),
-                        Screen::OptionsMenu => {
-                            if handle_options_menu(app, key_event.code) {
-                                return Ok(());
+                            Screen::ViewHistory => handle_vhi(app, key_event.code),
+                            Screen::SearchPassword => handle_si(app, key_event.code),
+                            Screen::GeneratePassword => handle_gi(app, key_event.code),
+                            Screen::DeletePassword => handle_di(app, key_event.code),
+                            Screen::FilterByTag => handle_tfi(app, key_event.code),
+                            Screen::ThemeSelector => handle_theme_selector(app, key_event.code),
+                            Screen::OptionsMenu => {
+                                if handle_options_menu(app, key_event.code) {
+                                    return Ok(());
+                                }
                             }
+                            Screen::Help => handle_help_screen(app, key_event.code),
+                            Screen::Settings => handle_settings_screen(app, key_event.code),
                         }
-                        Screen::Help => handle_help_screen(app, key_event.code),
-                        Screen::Settings => handle_settings_screen(app, key_event.code),
                     }
                 }
+                _ => {}
             }
-            _ => {}
         }
     }
     Ok(())
