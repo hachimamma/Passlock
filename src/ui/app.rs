@@ -51,6 +51,8 @@ pub struct App {
     pub show_totp_codes: bool,
     pub clipboard_timeout: u64,
     pub menu_click_map: Vec<(u16, u16, u16, u16, usize)>,
+    pub rr_ms: u64,
+    pub rr_cmap: Vec<(u16, u16, u16, u16)>,
 }
 
 impl App {
@@ -100,6 +102,8 @@ impl App {
             show_totp_codes: true,
             clipboard_timeout: 30,
             menu_click_map: Vec::new(),
+            rr_ms: 100,
+            rr_cmap: Vec::new(),
         }
     }
 
