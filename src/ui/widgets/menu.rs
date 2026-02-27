@@ -251,21 +251,21 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
         ));
 
     let menu_area = left_layout[2];
-    
+
     let menu_inner_area = menu_block.inner(menu_area);
-    
+
     let menu = List::new(menu_list).block(menu_block);
     f.render_widget(menu, menu_area);
 
     let mut current_y = menu_inner_area.y + 1;
-    
+
     app.menu_click_map.clear();
-    
+
     for i in 0..all_items.len() {
         let item_height = 4u16;
         let clickable_y_start = current_y;
         let clickable_y_end = current_y + 1;
-        
+
         app.menu_click_map.push((
             clickable_y_start,
             clickable_y_end,
@@ -273,7 +273,7 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
             menu_inner_area.x + menu_inner_area.width,
             i,
         ));
-        
+
         current_y += item_height;
     }
 
@@ -444,14 +444,26 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
     let refresh_area = right_layout[3];
     let refresh_widget = Paragraph::new(Line::from(vec![
         Span::styled("[ ", Style::default().fg(app.theme.gray())),
-        Span::styled("-", Style::default().fg(app.theme.orange()).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "-",
+            Style::default()
+                .fg(app.theme.orange())
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::styled(" ] ", Style::default().fg(app.theme.gray())),
         Span::styled(
-            format!("{}ms", refresh_ms),
-            Style::default().fg(app.theme.green()).add_modifier(Modifier::BOLD),
+            format!("{refresh_ms}ms"),
+            Style::default()
+                .fg(app.theme.green())
+                .add_modifier(Modifier::BOLD),
         ),
         Span::styled(" [ ", Style::default().fg(app.theme.gray())),
-        Span::styled("+", Style::default().fg(app.theme.orange()).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "+",
+            Style::default()
+                .fg(app.theme.orange())
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::styled(" ]", Style::default().fg(app.theme.gray())),
     ]))
     .alignment(Alignment::Center)
@@ -466,7 +478,7 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
             )),
     );
     f.render_widget(refresh_widget, refresh_area);
-    
+
     app.rr_cmap.clear();
     app.rr_cmap.push((
         refresh_area.y,
