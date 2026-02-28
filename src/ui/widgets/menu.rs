@@ -12,14 +12,16 @@ use ratatui::{
 
 #[allow(clippy::too_many_lines)]
 pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
-    let block = Block::default()
-        .borders(Borders::NONE)
+    let outer_block = Block::default()
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .border_style(Style::default().fg(app.theme.fg()))
         .style(Style::default().bg(app.theme.bg0()));
-    f.render_widget(block, size);
+    f.render_widget(outer_block, size);
 
     let main_layout = Layout::default()
         .direction(Direction::Horizontal)
-        .margin(2)
+        .margin(3)
         .constraints([Constraint::Percentage(65), Constraint::Percentage(35)])
         .split(size);
 
@@ -251,21 +253,21 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
         ));
 
     let menu_area = left_layout[2];
-
+    
     let menu_inner_area = menu_block.inner(menu_area);
-
+    
     let menu = List::new(menu_list).block(menu_block);
     f.render_widget(menu, menu_area);
 
     let mut current_y = menu_inner_area.y + 1;
-
+    
     app.menu_click_map.clear();
-
+    
     for i in 0..all_items.len() {
         let item_height = 4u16;
         let clickable_y_start = current_y;
         let clickable_y_end = current_y + 1;
-
+        
         app.menu_click_map.push((
             clickable_y_start,
             clickable_y_end,
@@ -273,7 +275,7 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
             menu_inner_area.x + menu_inner_area.width,
             i,
         ));
-
+        
         current_y += item_height;
     }
 
@@ -283,7 +285,6 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
             Constraint::Length(3), // status msg
             Constraint::Length(1), // spacer
             Constraint::Min(10),   // pwd stats
-            Constraint::Length(3), // refresh rate control
         ])
         .split(main_layout[1]);
 
@@ -441,44 +442,30 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
     }
 
     let refresh_ms = app.rr_ms;
-    let refresh_area = right_layout[3];
+    let refresh_text = format!(" [ - ] {}ms [ + ] ", refresh_ms);
+    let refresh_width = refresh_text.len() as u16;
+    
+    let refresh_area = Rect {
+        x: size.x + size.width - refresh_width - 1,
+        y: size.y + size.height - 1,
+        width: refresh_width,
+        height: 1,
+    };
+    
     let refresh_widget = Paragraph::new(Line::from(vec![
-        Span::styled("[ ", Style::default().fg(app.theme.gray())),
-        Span::styled(
-            "-",
-            Style::default()
-                .fg(app.theme.orange())
-                .add_modifier(Modifier::BOLD),
-        ),
+        Span::styled(" [ ", Style::default().fg(app.theme.gray())),
+        Span::styled("-", Style::default().fg(app.theme.orange()).add_modifier(Modifier::BOLD)),
         Span::styled(" ] ", Style::default().fg(app.theme.gray())),
         Span::styled(
-            format!("{refresh_ms}ms"),
-            Style::default()
-                .fg(app.theme.green())
-                .add_modifier(Modifier::BOLD),
+            format!("{}ms", refresh_ms),
+            Style::default().fg(app.theme.green()).add_modifier(Modifier::BOLD),
         ),
         Span::styled(" [ ", Style::default().fg(app.theme.gray())),
-        Span::styled(
-            "+",
-            Style::default()
-                .fg(app.theme.orange())
-                .add_modifier(Modifier::BOLD),
-        ),
-        Span::styled(" ]", Style::default().fg(app.theme.gray())),
-    ]))
-    .alignment(Alignment::Center)
-    .block(
-        Block::default()
-            .borders(Borders::ALL)
-            .border_type(BorderType::Rounded)
-            .border_style(Style::default().fg(app.theme.aqua()))
-            .title(Span::styled(
-                " Refresh Rate ",
-                Style::default().fg(app.theme.aqua()),
-            )),
-    );
+        Span::styled("+", Style::default().fg(app.theme.orange()).add_modifier(Modifier::BOLD)),
+        Span::styled(" ] ", Style::default().fg(app.theme.gray())),
+    ]));
     f.render_widget(refresh_widget, refresh_area);
-
+    
     app.rr_cmap.clear();
     app.rr_cmap.push((
         refresh_area.y,
