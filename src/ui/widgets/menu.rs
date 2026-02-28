@@ -12,15 +12,17 @@ use ratatui::{
 
 #[allow(clippy::too_many_lines)]
 pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
-    let block = Block::default()
-        .borders(Borders::NONE)
+    let outer_block = Block::default()
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .border_style(Style::default().fg(app.theme.fg()))
         .style(Style::default().bg(app.theme.bg0()));
-    f.render_widget(block, size);
+    f.render_widget(outer_block, size);
 
     let main_layout = Layout::default()
         .direction(Direction::Horizontal)
-        .margin(2)
-        .constraints([Constraint::Percentage(65), Constraint::Percentage(35)])
+        .margin(3)
+        .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
         .split(size);
 
     let has_vault = app.vault.is_some();
@@ -31,7 +33,7 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
         .constraints([
             Constraint::Length(3),              // title
             Constraint::Length(sysinfo_height), // system info and crypto
-            Constraint::Min(20),
+            Constraint::Min(0),                 // menu
         ])
         .split(main_layout[0]);
 
@@ -192,6 +194,18 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
         ("7", "Exit", "Lock vault"),
     ];
 
+    let menu_area = left_layout[2];
+    let avail_h = menu_area.height.saturating_sub(2);
+    let mlp_item = 2;
+    let items_count = all_items.len();
+    let min_req = u16::try_from(mlp_item * items_count).unwrap_or(u16::MAX);
+
+    let spacing = if avail_h > min_req + (u16::try_from(items_count).unwrap_or(0) * 2) {
+        2
+    } else {
+        i32::from(avail_h > min_req + u16::try_from(items_count).unwrap_or(0))
+    };
+
     let menu_list: Vec<ListItem> = all_items
         .iter()
         .enumerate()
@@ -212,28 +226,28 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
 
             let mut lines = vec![];
 
-            if i == 0 {
+            if i == 0 && spacing > 0 {
                 lines.push(Line::from(""));
             }
 
-            lines.extend(vec![
-                Line::from(vec![
-                    Span::styled(prefix, Style::default().fg(app.theme.yellow())),
-                    Span::styled(
-                        format!("[{num}] "),
-                        Style::default()
-                            .fg(app.theme.orange())
-                            .add_modifier(Modifier::BOLD),
-                    ),
-                    Span::styled(*title, title_style),
-                ]),
-                Line::from(vec![
-                    Span::raw("     "),
-                    Span::styled(*desc, Style::default().fg(app.theme.gray())),
-                ]),
-                Line::from(""),
-                Line::from(""),
-            ]);
+            lines.push(Line::from(vec![
+                Span::styled(prefix, Style::default().fg(app.theme.yellow())),
+                Span::styled(
+                    format!("[{num}] "),
+                    Style::default()
+                        .fg(app.theme.orange())
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(*title, title_style),
+            ]));
+            lines.push(Line::from(vec![
+                Span::raw("     "),
+                Span::styled(*desc, Style::default().fg(app.theme.gray())),
+            ]));
+
+            for _ in 0..spacing {
+                lines.push(Line::from(""));
+            }
 
             ListItem::new(lines)
         })
@@ -250,27 +264,28 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
                 .add_modifier(Modifier::BOLD),
         ));
 
-    let menu_area = left_layout[2];
-
-    let menu_inner_area = menu_block.inner(menu_area);
+    let menu_ia = menu_block.inner(menu_area);
 
     let menu = List::new(menu_list).block(menu_block);
     f.render_widget(menu, menu_area);
 
-    let mut current_y = menu_inner_area.y + 1;
+    let mut current_y = menu_ia.y;
+    if spacing > 0 {
+        current_y += 1;
+    }
 
     app.menu_click_map.clear();
 
     for i in 0..all_items.len() {
-        let item_height = 4u16;
-        let clickable_y_start = current_y;
-        let clickable_y_end = current_y + 1;
+        let item_height = u16::try_from(2 + spacing).unwrap_or(0);
+        let clicky_start = current_y;
+        let clicky_end = current_y + 1;
 
         app.menu_click_map.push((
-            clickable_y_start,
-            clickable_y_end,
-            menu_inner_area.x,
-            menu_inner_area.x + menu_inner_area.width,
+            clicky_start,
+            clicky_end,
+            menu_ia.x,
+            menu_ia.x + menu_ia.width,
             i,
         ));
 
@@ -282,8 +297,7 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
         .constraints([
             Constraint::Length(3), // status msg
             Constraint::Length(1), // spacer
-            Constraint::Min(10),   // pwd stats
-            Constraint::Length(3), // refresh rate control
+            Constraint::Min(0),    // pwd stats
         ])
         .split(main_layout[1]);
 
@@ -440,10 +454,19 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
         f.render_widget(stats_box, right_layout[2]);
     }
 
-    let refresh_ms = app.rr_ms;
-    let refresh_area = right_layout[3];
-    let refresh_widget = Paragraph::new(Line::from(vec![
-        Span::styled("[ ", Style::default().fg(app.theme.gray())),
+    let rms = app.rr_ms;
+    let rtxt = format!(" [ - ] {rms}ms [ + ] ");
+    let r_width = u16::try_from(rtxt.len()).unwrap_or(u16::MAX);
+
+    let r_area = Rect {
+        x: size.x + size.width - r_width - 1,
+        y: size.y + size.height - 1,
+        width: r_width,
+        height: 1,
+    };
+
+    let r_widget = Paragraph::new(Line::from(vec![
+        Span::styled(" [ ", Style::default().fg(app.theme.gray())),
         Span::styled(
             "-",
             Style::default()
@@ -452,7 +475,7 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
         ),
         Span::styled(" ] ", Style::default().fg(app.theme.gray())),
         Span::styled(
-            format!("{refresh_ms}ms"),
+            format!("{rms}ms"),
             Style::default()
                 .fg(app.theme.green())
                 .add_modifier(Modifier::BOLD),
@@ -464,26 +487,15 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
                 .fg(app.theme.orange())
                 .add_modifier(Modifier::BOLD),
         ),
-        Span::styled(" ]", Style::default().fg(app.theme.gray())),
-    ]))
-    .alignment(Alignment::Center)
-    .block(
-        Block::default()
-            .borders(Borders::ALL)
-            .border_type(BorderType::Rounded)
-            .border_style(Style::default().fg(app.theme.aqua()))
-            .title(Span::styled(
-                " Refresh Rate ",
-                Style::default().fg(app.theme.aqua()),
-            )),
-    );
-    f.render_widget(refresh_widget, refresh_area);
+        Span::styled(" ] ", Style::default().fg(app.theme.gray())),
+    ]));
+    f.render_widget(r_widget, r_area);
 
     app.rr_cmap.clear();
     app.rr_cmap.push((
-        refresh_area.y,
-        refresh_area.y + refresh_area.height,
-        refresh_area.x,
-        refresh_area.x + refresh_area.width,
+        r_area.y,
+        r_area.y + r_area.height,
+        r_area.x,
+        r_area.x + r_area.width,
     ));
 }
