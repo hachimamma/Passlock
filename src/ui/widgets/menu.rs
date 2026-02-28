@@ -198,14 +198,12 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
     let avail_h = menu_area.height.saturating_sub(2);
     let mlp_item = 2;
     let items_count = all_items.len();
-    let min_req = (mlp_item * items_count) as u16;
-    
-    let spacing = if avail_h >= min_req + (items_count as u16 * 2) + 1 {
+    let min_req = u16::try_from(mlp_item * items_count).unwrap_or(u16::MAX);
+
+    let spacing = if avail_h > min_req + (u16::try_from(items_count).unwrap_or(0) * 2) {
         2
-    } else if avail_h >= min_req + items_count as u16 + 1 {
-        1
     } else {
-        0
+        i32::from(avail_h > min_req + u16::try_from(items_count).unwrap_or(0))
     };
 
     let menu_list: Vec<ListItem> = all_items
@@ -246,7 +244,7 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
                 Span::raw("     "),
                 Span::styled(*desc, Style::default().fg(app.theme.gray())),
             ]));
-            
+
             for _ in 0..spacing {
                 lines.push(Line::from(""));
             }
@@ -265,9 +263,9 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
                 .fg(app.theme.green())
                 .add_modifier(Modifier::BOLD),
         ));
-    
+
     let menu_ia = menu_block.inner(menu_area);
-    
+
     let menu = List::new(menu_list).block(menu_block);
     f.render_widget(menu, menu_area);
 
@@ -275,14 +273,14 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
     if spacing > 0 {
         current_y += 1;
     }
-    
+
     app.menu_click_map.clear();
-    
+
     for i in 0..all_items.len() {
-        let item_height = (2 + spacing) as u16;
+        let item_height = u16::try_from(2 + spacing).unwrap_or(0);
         let clicky_start = current_y;
         let clicky_end = current_y + 1;
-        
+
         app.menu_click_map.push((
             clicky_start,
             clicky_end,
@@ -290,7 +288,7 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
             menu_ia.x + menu_ia.width,
             i,
         ));
-        
+
         current_y += item_height;
     }
 
@@ -457,30 +455,42 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
     }
 
     let rms = app.rr_ms;
-    let rtxt = format!(" [ - ] {}ms [ + ] ", rms);
-    let r_width = rtxt.len() as u16;
-    
+    let rtxt = format!(" [ - ] {rms}ms [ + ] ");
+    let r_width = u16::try_from(rtxt.len()).unwrap_or(u16::MAX);
+
     let r_area = Rect {
         x: size.x + size.width - r_width - 1,
         y: size.y + size.height - 1,
         width: r_width,
         height: 1,
     };
-    
+
     let r_widget = Paragraph::new(Line::from(vec![
         Span::styled(" [ ", Style::default().fg(app.theme.gray())),
-        Span::styled("-", Style::default().fg(app.theme.orange()).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "-",
+            Style::default()
+                .fg(app.theme.orange())
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::styled(" ] ", Style::default().fg(app.theme.gray())),
         Span::styled(
-            format!("{}ms", rms),
-            Style::default().fg(app.theme.green()).add_modifier(Modifier::BOLD),
+            format!("{rms}ms"),
+            Style::default()
+                .fg(app.theme.green())
+                .add_modifier(Modifier::BOLD),
         ),
         Span::styled(" [ ", Style::default().fg(app.theme.gray())),
-        Span::styled("+", Style::default().fg(app.theme.orange()).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "+",
+            Style::default()
+                .fg(app.theme.orange())
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::styled(" ] ", Style::default().fg(app.theme.gray())),
     ]));
     f.render_widget(r_widget, r_area);
-    
+
     app.rr_cmap.clear();
     app.rr_cmap.push((
         r_area.y,
