@@ -33,7 +33,7 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
         .constraints([
             Constraint::Length(3),              // title
             Constraint::Length(sysinfo_height), // system info and crypto
-            Constraint::Min(20),
+            Constraint::Min(20),                // menu
         ])
         .split(main_layout[0]);
 
@@ -234,7 +234,6 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
                     Span::styled(*desc, Style::default().fg(app.theme.gray())),
                 ]),
                 Line::from(""),
-                Line::from(""),
             ]);
 
             ListItem::new(lines)
@@ -264,7 +263,7 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
     app.menu_click_map.clear();
     
     for i in 0..all_items.len() {
-        let item_height = 4u16;
+        let item_height = 3u16;
         let clickable_y_start = current_y;
         let clickable_y_end = current_y + 1;
         
