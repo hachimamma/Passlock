@@ -1,4 +1,5 @@
 mod backup;
+mod config;
 mod crypto;
 mod models;
 mod storage;
@@ -38,8 +39,14 @@ pub fn get_timestamp() -> u64 {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     crypto::init_crypto()?;
-
+    
+    // Initialize PassLock directory structure and config
+    config::init_passlock_dirs()?;
     backup::init_backup_system()?;
+    
+    // Load config to get active vault name
+    let cfg = config::load_config().unwrap_or_default();
+    let active_vault = cfg.active_vault.clone();
 
     let args: Vec<String> = env::args().collect();
 
@@ -69,9 +76,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let password = &args[2];
                 sync_vault(password)?;
             }
+            // NEW: Backup commands
             "backup" => {
                 handle_backup_cmd(&args[2..])?;
             }
+            // NEW: Export vault to external file (ENCRYPTED - for backup)
             "export" => {
                 if args.len() < 4 {
                     eprintln!("Usage: passlock export <password> <output-file>");
@@ -87,8 +96,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 let password = &args[2];
                 let output_file = &args[3];
-                backup::export_vault(password, output_file)?;
+                backup::export_vault(&active_vault, password, output_file)?;
             }
+            // NEW: Import vault from external file (ENCRYPTED - for restore)
             "import" => {
                 if args.len() < 4 {
                     eprintln!("Usage: passlock import <password> <input-file>");
@@ -103,16 +113,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 let password = &args[2];
                 let input_file = &args[3];
-                backup::import_vault(password, input_file)?;
+                backup::import_vault(&active_vault, password, input_file)?;
             }
+            // NEW: Export to CSV (PLAINTEXT - for other password managers)
             "export-csv" => {
                 if args.len() < 4 {
                     eprintln!("Usage: passlock export-csv <password> <output-file.csv>");
                     eprintln!();
                     eprintln!("WARNING: Creates UNENCRYPTED CSV with plaintext passwords!");
-                    eprintln!(
-                        "Use for importing to other password managers (LastPass, Bitwarden, etc.)"
-                    );
+                    eprintln!("Use for importing to other password managers (LastPass, Bitwarden, etc.)");
                     eprintln!();
                     eprintln!("Example:");
                     eprintln!("  passlock export-csv myPass123 ~/passwords.csv");
@@ -120,8 +129,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 let password = &args[2];
                 let output_file = &args[3];
-                backup::export_to_csv(password, output_file)?;
+                backup::export_to_csv(&active_vault, password, output_file)?;
             }
+            // NEW: Export to JSON (PLAINTEXT - for other password managers)
             "export-json" => {
                 if args.len() < 4 {
                     eprintln!("Usage: passlock export-json <password> <output-file.json>");
@@ -135,8 +145,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 let password = &args[2];
                 let output_file = &args[3];
-                backup::export_to_json(password, output_file)?;
+                backup::export_to_json(&active_vault, password, output_file)?;
             }
+            // NEW: Import from CSV (PLAINTEXT - from other password managers)
             "import-csv" => {
                 if args.len() < 4 {
                     eprintln!("Usage: passlock import-csv <password> <input-file.csv>");
@@ -150,8 +161,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 let password = &args[2];
                 let input_file = &args[3];
-                backup::import_from_csv(password, input_file)?;
+                backup::import_from_csv(&active_vault, password, input_file)?;
             }
+            // NEW: Import from JSON (PLAINTEXT - from other password managers)
             "import-json" => {
                 if args.len() < 4 {
                     eprintln!("Usage: passlock import-json <password> <input-file.json>");
@@ -164,7 +176,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 let password = &args[2];
                 let input_file = &args[3];
-                backup::import_from_json(password, input_file)?;
+                backup::import_from_json(&active_vault, password, input_file)?;
             }
             "info" => {
                 handle_icmd(&args[2..])?;
@@ -205,10 +217,11 @@ fn create_vault(password: &str) -> Result<(), Box<dyn std::error::Error>> {
     storage::svv(&vault, password)?;
 
     println!("[✔] Vault created successfully.");
-
+    
+    // Create initial backup (force=true for first backup)
     println!("[...] Creating initial backup...");
-    backup::create_backup("default", 10)?;
-
+    backup::create_backup("personal", 10, true)?;
+    
     Ok(())
 }
 
@@ -233,13 +246,16 @@ fn sync_vault(password: &str) -> Result<(), Box<dyn std::error::Error>> {
     storage::svv(&vault, password)?;
 
     println!("[✔] Vault synced successfully.");
-
+    
+    // Automatic backup after sync (smart backup)
     println!("[...] Creating backup...");
-    backup::create_backup("default", 10)?;
-
+    let cfg = config::load_config().unwrap_or_default();
+    backup::create_backup(&cfg.active_vault, cfg.max_backups, false)?;
+    
     Ok(())
 }
 
+/// Handle backup subcommands
 fn handle_backup_cmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     if args.is_empty() {
         println!("Backup Commands:");
@@ -266,28 +282,32 @@ fn handle_backup_cmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> 
                 std::process::exit(1);
             }
             let password = &args[1];
-
+            
+            // Verify password before backup
             let _vault = storage::ld_vt(password)?;
             println!("[✔] Password verified");
-
-            backup::create_backup("default", 10)?;
+            
+            // Create manual backup (force=true)
+            let cfg = config::load_config().unwrap_or_default();
+            backup::create_backup(&cfg.active_vault, cfg.max_backups, true)?;
             println!("[✔] Manual backup created successfully");
         }
         "list" => {
-            let backups = backup::list_backups("default")?;
-
+            let cfg = config::load_config().unwrap_or_default();
+            let backups = backup::list_backups(&cfg.active_vault)?;
+            
             if backups.is_empty() {
-                println!("[!] No backups found");
+                println!("[!] No backups found for vault '{}'", cfg.active_vault);
                 println!();
                 println!("Create your first backup with:");
                 println!("  passlock backup create <password>");
             } else {
-                println!("Available Backups:");
+                println!("Available Backups for vault '{}':", cfg.active_vault);
                 println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                 println!();
                 println!("{:<40} {:<12} Created", "Filename", "Size");
                 println!("{}", "─".repeat(70));
-
+                
                 for (filename, size, created) in &backups {
                     let size_kb = if *size > 1024 {
                         format!("{} KB", *size / 1024)
@@ -296,7 +316,7 @@ fn handle_backup_cmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> 
                     };
                     println!("{filename:<40} {size_kb:<12} {created}");
                 }
-
+                
                 println!();
                 println!("Total backups: {}", backups.len());
                 println!();
@@ -309,15 +329,14 @@ fn handle_backup_cmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> 
                 eprintln!("Usage: passlock backup restore <backup-name> <password>");
                 eprintln!();
                 eprintln!("Example:");
-                eprintln!(
-                    "  passlock backup restore backup_2026-02-28_10-30-45.vault myPassword123"
-                );
+                eprintln!("  passlock backup restore backup_2026-02-28_10-30-45.vault myPassword123");
                 std::process::exit(1);
             }
             let backup_name = &args[1];
             let password = &args[2];
-
-            backup::restore_backup("default", backup_name, password)?;
+            
+            let cfg = config::load_config().unwrap_or_default();
+            backup::restore_backup(&cfg.active_vault, backup_name, password)?;
             println!("[✔] Backup restored successfully");
         }
         _ => {
@@ -326,7 +345,7 @@ fn handle_backup_cmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> 
             println!("Available subcommands: create, list, restore");
         }
     }
-
+    
     Ok(())
 }
 
@@ -368,9 +387,11 @@ fn handle_icmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
             }
-
-            let backups = backup::list_backups("default").unwrap_or_else(|_| Vec::new());
-            println!("  Backups: {} available", backups.len());
+            
+            // Show backup info
+            let cfg = config::load_config().unwrap_or_default();
+            let backups = backup::list_backups(&cfg.active_vault).unwrap_or_else(|_| Vec::new());
+            println!("  Backups: {} available (vault: {})", backups.len(), cfg.active_vault);
         } else {
             println!("Vault Status:");
             println!("  No vault found");
