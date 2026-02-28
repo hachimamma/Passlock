@@ -38,7 +38,7 @@ pub fn get_timestamp() -> u64 {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     crypto::init_crypto()?;
-    
+
     backup::init_backup_system()?;
 
     let args: Vec<String> = env::args().collect();
@@ -110,7 +110,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     eprintln!("Usage: passlock export-csv <password> <output-file.csv>");
                     eprintln!();
                     eprintln!("WARNING: Creates UNENCRYPTED CSV with plaintext passwords!");
-                    eprintln!("Use for importing to other password managers (LastPass, Bitwarden, etc.)");
+                    eprintln!(
+                        "Use for importing to other password managers (LastPass, Bitwarden, etc.)"
+                    );
                     eprintln!();
                     eprintln!("Example:");
                     eprintln!("  passlock export-csv myPass123 ~/passwords.csv");
@@ -203,10 +205,10 @@ fn create_vault(password: &str) -> Result<(), Box<dyn std::error::Error>> {
     storage::svv(&vault, password)?;
 
     println!("[✔] Vault created successfully.");
-    
+
     println!("[...] Creating initial backup...");
     backup::create_backup("default", 10)?;
-    
+
     Ok(())
 }
 
@@ -231,10 +233,10 @@ fn sync_vault(password: &str) -> Result<(), Box<dyn std::error::Error>> {
     storage::svv(&vault, password)?;
 
     println!("[✔] Vault synced successfully.");
-    
+
     println!("[...] Creating backup...");
     backup::create_backup("default", 10)?;
-    
+
     Ok(())
 }
 
@@ -264,16 +266,16 @@ fn handle_backup_cmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> 
                 std::process::exit(1);
             }
             let password = &args[1];
-            
+
             let _vault = storage::ld_vt(password)?;
             println!("[✔] Password verified");
-            
+
             backup::create_backup("default", 10)?;
             println!("[✔] Manual backup created successfully");
         }
         "list" => {
             let backups = backup::list_backups("default")?;
-            
+
             if backups.is_empty() {
                 println!("[!] No backups found");
                 println!();
@@ -283,18 +285,18 @@ fn handle_backup_cmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> 
                 println!("Available Backups:");
                 println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                 println!();
-                println!("{:<40} {:<12} {}", "Filename", "Size", "Created");
+                println!("{:<40} {:<12} Created", "Filename", "Size");
                 println!("{}", "─".repeat(70));
-                
+
                 for (filename, size, created) in &backups {
                     let size_kb = if *size > 1024 {
                         format!("{} KB", *size / 1024)
                     } else {
                         format!("{} bytes", *size)
                     };
-                    println!("{:<40} {:<12} {}", filename, size_kb, created);
+                    println!("{filename:<40} {size_kb:<12} {created}");
                 }
-                
+
                 println!();
                 println!("Total backups: {}", backups.len());
                 println!();
@@ -307,12 +309,14 @@ fn handle_backup_cmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> 
                 eprintln!("Usage: passlock backup restore <backup-name> <password>");
                 eprintln!();
                 eprintln!("Example:");
-                eprintln!("  passlock backup restore backup_2026-02-28_10-30-45.vault myPassword123");
+                eprintln!(
+                    "  passlock backup restore backup_2026-02-28_10-30-45.vault myPassword123"
+                );
                 std::process::exit(1);
             }
             let backup_name = &args[1];
             let password = &args[2];
-            
+
             backup::restore_backup("default", backup_name, password)?;
             println!("[✔] Backup restored successfully");
         }
@@ -322,7 +326,7 @@ fn handle_backup_cmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> 
             println!("Available subcommands: create, list, restore");
         }
     }
-    
+
     Ok(())
 }
 
@@ -364,7 +368,7 @@ fn handle_icmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
             }
-            
+
             let backups = backup::list_backups("default").unwrap_or_else(|_| Vec::new());
             println!("  Backups: {} available", backups.len());
         } else {
