@@ -192,20 +192,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn create_vault(password: &str) -> Result<(), Box<dyn std::error::Error>> {
-    if storage::vt_exi() {
-        return Err("Vault already exists".into());
-    }
-
-    let salt = crypto::gen_salt();
-    let vault = Vault::new(salt);
-
-    storage::svv(&vault, password)?;
-
-    println!("[✔] Vault created successfully.");
-    Ok(())
-}
-
 fn unlock_vault(password: &str) -> Result<(), Box<dyn std::error::Error>> {
     let vault = storage::ld_vt(password)?;
     println!("[✔] Vault unlocked successfully.");
