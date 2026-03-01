@@ -51,8 +51,8 @@ jobs:
         fi
         
         # Check config file exists
-        if [ ! -f ~/.passlock/config.toml ]; then
-          echo "Config file not created at ~/.passlock/config.toml"
+        if [ ! -f ~/.passlock/config.json ]; then
+          echo "Config file not created at ~/.passlock/config.json"
           exit 1
         fi
         
@@ -70,7 +70,7 @@ jobs:
 
     - name: Test full encryption/decryption cycle
       run: |
-        rm -f ~/.passlock/vaults/myVault.vault ~/.passlock.temp ~/.passlock/config.toml
+        rm -f ~/.passlock/vaults/myVault.vault ~/.passlock.temp ~/.passlock/config.json
         
         ./target/release/passlock vault create myVault mySecurePass123
         ./target/release/passlock unlock mySecurePass123
