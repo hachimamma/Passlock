@@ -42,17 +42,25 @@ jobs:
 
     - name: Test CLI create command
       run: |
-        ./target/release/passlock create testpassword123
+        ./target/release/passlock vault create myVault mySecurePass123
         
-        if [ ! -f ~/.passlock.vault ]; then
-          echo "Vault file not created"
+        # Check for vault in the new location
+        if [ ! -f ~/.passlock/vaults/myVault.vault ]; then
+          echo "Vault file not created at ~/.passlock/vaults/myVault.vault"
           exit 1
         fi
+        
+        # Check config file exists
+        if [ ! -f ~/.passlock/config.json ]; then
+          echo "Config file not created at ~/.passlock/config.json"
+          exit 1
+        fi
+        
         echo "Vault created successfully"
 
     - name: Test CLI unlock command
       run: |
-        ./target/release/passlock unlock testpassword123
+        ./target/release/passlock unlock mySecurePass123
         
         if [ ! -f ~/.passlock.temp ]; then
           echo "Temp file not created"
@@ -62,9 +70,9 @@ jobs:
 
     - name: Test full encryption/decryption cycle
       run: |
-        rm -f ~/.passlock.vault ~/.passlock.temp
+        rm -f ~/.passlock/vaults/myVault.vault ~/.passlock.temp ~/.passlock/config.json
         
-        ./target/release/passlock create mySecurePass123
+        ./target/release/passlock vault create myVault mySecurePass123
         ./target/release/passlock unlock mySecurePass123
         
         echo '{"e":[],"s":"'$(hexdump -n 16 -e '16/1 "%02x"' /dev/urandom)'"}' > ~/.passlock.temp
@@ -205,7 +213,14 @@ jobs:
         cargo build --release
         cargo test
         
-        ./target/release/passlock create password123
+        ./target/release/passlock vault create myVault password123
+        
+        # Check for vault in the new location
+        if [ ! -f ~/.passlock/vaults/myVault.vault ]; then
+          echo "Vault file not created at ~/.passlock/vaults/myVault.vault"
+          exit 1
+        fi
+        
         ./target/release/passlock unlock password123
         
         echo "Cross-platform build successful on ${{ matrix.os }}"
