@@ -37,23 +37,23 @@ pub fn get_config_path() -> PathBuf {
 }
 
 pub fn get_vault_path(vault_name: &str) -> PathBuf {
-    get_vaults_dir().join(format!("{}.vault", vault_name))
+    get_vaults_dir().join(format!("{vault_name}.vault"))
 }
 
 pub fn init_passlock_dirs() -> Result<(), Box<dyn std::error::Error>> {
     let passlock_dir = get_passlock_dir();
     let vaults_dir = get_vaults_dir();
-    
+
     if !passlock_dir.exists() {
         fs::create_dir_all(&passlock_dir)?;
         println!("[✔] Created PassLock directory: {}", passlock_dir.display());
     }
-    
+
     if !vaults_dir.exists() {
         fs::create_dir_all(&vaults_dir)?;
         println!("[✔] Created vaults directory: {}", vaults_dir.display());
     }
-    
+
     let home = dirs::home_dir().expect("Could not find home directory");
     let old_vault = home.join(".passlock.vault");
     if old_vault.exists() {
@@ -64,13 +64,13 @@ pub fn init_passlock_dirs() -> Result<(), Box<dyn std::error::Error>> {
             println!("[!] You can delete the old vault: {}", old_vault.display());
         }
     }
-    
+
     Ok(())
 }
 
 pub fn load_config() -> Result<Config, Box<dyn std::error::Error>> {
     let config_path = get_config_path();
-    
+
     if config_path.exists() {
         let config_str = fs::read_to_string(config_path)?;
         let config: Config = serde_json::from_str(&config_str)?;
@@ -91,24 +91,24 @@ pub fn save_config(config: &Config) -> Result<(), Box<dyn std::error::Error>> {
 
 pub fn list_vaults() -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let vaults_dir = get_vaults_dir();
-    
+
     if !vaults_dir.exists() {
         return Ok(Vec::new());
     }
-    
+
     let mut vaults = Vec::new();
-    
+
     for entry in fs::read_dir(vaults_dir)? {
         let entry = entry?;
         let path = entry.path();
-        
+
         if path.extension().and_then(|s| s.to_str()) == Some("vault") {
             if let Some(name) = path.file_stem().and_then(|s| s.to_str()) {
                 vaults.push(name.to_string());
             }
         }
     }
-    
+
     vaults.sort();
     Ok(vaults)
 }
@@ -119,45 +119,45 @@ pub fn vault_exists(vault_name: &str) -> bool {
 
 pub fn delete_vault(vault_name: &str) -> Result<(), Box<dyn std::error::Error>> {
     let vault_path = get_vault_path(vault_name);
-    
+
     if !vault_path.exists() {
-        return Err(format!("Vault '{}' does not exist", vault_name).into());
+        return Err(format!("Vault '{vault_name}' does not exist").into());
     }
-    
+
     fs::remove_file(&vault_path)?;
-    
+
     let backup_dir = crate::backup::gvback_dir(vault_name);
     if backup_dir.exists() {
         fs::remove_dir_all(&backup_dir)?;
     }
-    
-    println!("[✔] Deleted vault: {}", vault_name);
-    println!("[✔] Deleted backups for: {}", vault_name);
-    
+
+    println!("[✔] Deleted vault: {vault_name}");
+    println!("[✔] Deleted backups for: {vault_name}");
+
     Ok(())
 }
 
 pub fn rename_vault(old_name: &str, new_name: &str) -> Result<(), Box<dyn std::error::Error>> {
     let old_path = get_vault_path(old_name);
     let new_path = get_vault_path(new_name);
-    
+
     if !old_path.exists() {
-        return Err(format!("Vault '{}' does not exist", old_name).into());
+        return Err(format!("Vault '{old_name}' does not exist").into());
     }
-    
+
     if new_path.exists() {
-        return Err(format!("Vault '{}' already exists", new_name).into());
+        return Err(format!("Vault '{new_name}' already exists").into());
     }
-    
+
     fs::rename(&old_path, &new_path)?;
-    
+
     let old_backup_dir = crate::backup::gvback_dir(old_name);
     let new_backup_dir = crate::backup::gvback_dir(new_name);
     if old_backup_dir.exists() {
         fs::rename(&old_backup_dir, &new_backup_dir)?;
     }
-    
-    println!("[✔] Renamed vault: {} → {}", old_name, new_name);
-    
+
+    println!("[✔] Renamed vault: {old_name} → {new_name}");
+
     Ok(())
 }

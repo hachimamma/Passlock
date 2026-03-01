@@ -11,11 +11,11 @@ fn vt_p_named(vault_name: &str) -> PathBuf {
 /// Save vault to a specific vault register
 pub fn svv_named(vault_name: &str, v: &Vault, pwd: &str) -> Result<(), String> {
     let vault_path = vt_p_named(vault_name);
-    
+
     if let Some(parent) = vault_path.parent() {
         fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
-    
+
     let j = serde_json::to_string(v).map_err(|e| e.to_string())?;
     let j_bytes = j.as_bytes();
     let enc_d = crypto::enc(j_bytes, pwd, &v.s)?;
@@ -24,21 +24,21 @@ pub fn svv_named(vault_name: &str, v: &Vault, pwd: &str) -> Result<(), String> {
     __final_data__.extend_from_slice(&salt_bytes);
     __final_data__.extend_from_slice(&enc_d);
     fs::write(vault_path, __final_data__).map_err(|e| e.to_string())?;
-    
+
     let tmp_j = serde_json::to_string(v).map_err(|e| e.to_string())?;
     fs::write(tmp_p(), tmp_j).map_err(|e| e.to_string())?;
-    
+
     Ok(())
 }
 
 /// Load vault from a specific vault register
 pub fn ld_vt_named(vault_name: &str, pwd: &str) -> Result<Vault, String> {
     let vault_path = vt_p_named(vault_name);
-    
+
     if !vault_path.exists() {
-        return Err(format!("Vault '{}' not found", vault_name));
+        return Err(format!("Vault '{vault_name}' not found"));
     }
-    
+
     let data = fs::read(vault_path).map_err(|_| "vault not found")?;
     if data.len() < 16 {
         return Err("corrupt vault".to_string());
@@ -49,10 +49,10 @@ pub fn ld_vt_named(vault_name: &str, pwd: &str) -> Result<Vault, String> {
     let dec_data = crypto::dec(enc_data, pwd, &salt)?;
     let dec_str = String::from_utf8(dec_data).map_err(|_| "invalid data")?;
     let v: Vault = serde_json::from_str(&dec_str).map_err(|e| e.to_string())?;
-    
+
     let tmp_j = serde_json::to_string(&v).map_err(|e| e.to_string())?;
     fs::write(tmp_p(), tmp_j).map_err(|e| e.to_string())?;
-    
+
     Ok(v)
 }
 
