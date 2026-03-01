@@ -64,7 +64,7 @@ jobs:
       run: |
         rm -f ~/.passlock.vault ~/.passlock.temp
         
-        ./target/release/passlock create mySecurePass123
+        ./target/release/passlock vault create myVault mySecurePass123
         ./target/release/passlock unlock mySecurePass123
         
         echo '{"e":[],"s":"'$(hexdump -n 16 -e '16/1 "%02x"' /dev/urandom)'"}' > ~/.passlock.temp
@@ -205,7 +205,7 @@ jobs:
         cargo build --release
         cargo test
         
-        ./target/release/passlock create password123
+        ./target/release/passlock vault create myVault password123
         ./target/release/passlock unlock password123
         
         echo "Cross-platform build successful on ${{ matrix.os }}"
