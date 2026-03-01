@@ -44,10 +44,18 @@ jobs:
       run: |
         ./target/release/passlock vault create myVault mySecurePass123
         
-        if [ ! -f ~/.passlock.vault ]; then
-          echo "Vault file not created"
+        # Check for vault in the new location
+        if [ ! -f ~/.passlock/vaults/myVault.vault ]; then
+          echo "Vault file not created at ~/.passlock/vaults/myVault.vault"
           exit 1
         fi
+        
+        # Check config file exists
+        if [ ! -f ~/.passlock/config.toml ]; then
+          echo "Config file not created at ~/.passlock/config.toml"
+          exit 1
+        fi
+        
         echo "Vault created successfully"
 
     - name: Test CLI unlock command
@@ -62,7 +70,7 @@ jobs:
 
     - name: Test full encryption/decryption cycle
       run: |
-        rm -f ~/.passlock.vault ~/.passlock.temp
+        rm -f ~/.passlock/vaults/myVault.vault ~/.passlock.temp ~/.passlock/config.toml
         
         ./target/release/passlock vault create myVault mySecurePass123
         ./target/release/passlock unlock mySecurePass123
@@ -206,6 +214,13 @@ jobs:
         cargo test
         
         ./target/release/passlock vault create myVault password123
+        
+        # Check for vault in the new location
+        if [ ! -f ~/.passlock/vaults/myVault.vault ]; then
+          echo "Vault file not created at ~/.passlock/vaults/myVault.vault"
+          exit 1
+        fi
+        
         ./target/release/passlock unlock password123
         
         echo "Cross-platform build successful on ${{ matrix.os }}"
