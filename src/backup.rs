@@ -5,7 +5,6 @@ use std::fmt::Write;
 use std::fs;
 use std::path::PathBuf;
 
-// Type alias for complex return type
 type BackupInfo = Vec<(String, u64, String)>;
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 

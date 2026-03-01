@@ -9,7 +9,7 @@ mod vault_ffi;
 
 use models::Vault;
 use std::env;
-use std::io::{self, BufRead}; // Moved import to top
+use std::io::{self, BufRead};
 
 /// Generates a UUID string.
 ///
@@ -397,7 +397,7 @@ fn handle_vault_cmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
             backup::create_backup(vault_name, 10, true)?;
 
             let mut cfg = config::load_config()?;
-            cfg.active_vault.clone_from(vault_name); // FIXED: using clone_from
+            cfg.active_vault.clone_from(vault_name);
             config::save_config(&cfg)?;
             println!("[✔] Vault '{vault_name}' set as active");
         }
@@ -441,7 +441,7 @@ fn handle_vault_cmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
             }
 
             let mut cfg = config::load_config()?;
-            cfg.active_vault.clone_from(vault_name); // FIXED: using clone_from
+            cfg.active_vault.clone_from(vault_name);
             config::save_config(&cfg)?;
 
             println!("[✔] Active vault set to: {vault_name}");
@@ -499,7 +499,6 @@ fn handle_vault_cmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
             println!("WARNING: This will delete vault '{vault_name}' and all its backups");
             println!("Are you sure? (y/n)");
 
-            // Removed inner use statement - now using import from top
             let stdin = io::stdin();
             let mut line = String::new();
             stdin.lock().read_line(&mut line)?;
@@ -525,7 +524,7 @@ fn handle_vault_cmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
 
             let mut cfg = config::load_config()?;
             if cfg.active_vault == *old_name {
-                cfg.active_vault.clone_from(new_name); // FIXED: using clone_from
+                cfg.active_vault.clone_from(new_name);
                 config::save_config(&cfg)?;
             }
         }
