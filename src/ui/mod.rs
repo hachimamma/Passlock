@@ -418,7 +418,7 @@ fn run_app<B: ratatui::backend::Backend>(
                             Screen::MainMenu => {
                                 if handle_mmi(app, key_event.code) {
                                     if let Err(e) = crate::auto_back() {
-                                        eprintln!("[!] Auto-backup failed: {}", e);
+                                        eprintln!("[!] Auto-backup failed: {e}");
                                     }
                                     return Ok(());
                                 }
@@ -455,7 +455,7 @@ fn run_app<B: ratatui::backend::Backend>(
                             Screen::OptionsMenu => {
                                 if handle_options_menu(app, key_event.code) {
                                     if let Err(e) = crate::auto_back() {
-                                        eprintln!("[!] Auto-backup failed: {}", e);
+                                        eprintln!("[!] Auto-backup failed: {e}");
                                     }
                                     return Ok(());
                                 }
