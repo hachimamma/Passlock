@@ -2,19 +2,19 @@ use crate::storage;
 use std::fs;
 use std::path::PathBuf;
 
-/// Gets the backup directory path: ~/.passlock/backups/
-pub fn get_backup_dir() -> PathBuf {
+/// Gets the backup directory path
+pub fn gback_dir() -> PathBuf {
     crate::config::get_passlock_dir().join("backups")
 }
 
-/// Gets the vault-specific backup directory
-pub fn get_vault_backup_dir(vault_name: &str) -> PathBuf {
-    get_backup_dir().join(vault_name)
+/// Gets the vault specific backup directory
+pub fn gvback_dir(vault_name: &str) -> PathBuf {
+    gback_dir().join(vault_name)
 }
 
 /// Initialize backup directory structure
-pub fn init_backup_system() -> Result<(), Box<dyn std::error::Error>> {
-    let backup_dir = get_backup_dir();
+pub fn init_bsys() -> Result<(), Box<dyn std::error::Error>> {
+    let backup_dir = gback_dir();
     
     if !backup_dir.exists() {
         fs::create_dir_all(&backup_dir)?;
@@ -26,39 +26,35 @@ pub fn init_backup_system() -> Result<(), Box<dyn std::error::Error>> {
 
 /// Create a timestamped backup of the vault
 /// 
-/// SMART BACKUP: Only creates a new backup if the vault has actually changed
-/// since the last backup. This saves disk space!
+/// Only creates a new backup if the vault has actually changed
+/// since the last backup
 /// 
-/// Returns: (backup_filename, was_actually_created)
+/// Returns: (back_fn, was_actually_created)
 pub fn create_backup(
     vault_name: &str,
     max_backups: usize,
-    force: bool, // Set true to force backup even if no changes
+    force: bool,
 ) -> Result<(String, bool), Box<dyn std::error::Error>> {
     let vault_path = crate::config::get_vault_path(vault_name);
 
     if !vault_path.exists() {
         return Err(format!("Vault '{}' not found", vault_name).into());
     }
-    
-    // SMART BACKUP: Check if vault has changed since last backup
+
     if !force {
-        let backup_dir = get_vault_backup_dir(vault_name);
+        let backup_dir = gvback_dir(vault_name);
         if backup_dir.exists() {
-            let backups = list_backups(vault_name)?;
+            let backups = ls_backs(vault_name)?;
             if !backups.is_empty() {
-                // Get most recent backup
-                let latest_backup = &backups[0];
-                let latest_backup_path = backup_dir.join(&latest_backup.0);
+                let last_back = &backups[0];
+                let lb_path = backup_dir.join(&last_back.0);
                 
-                // Compare files
                 let vault_meta = fs::metadata(&vault_path)?;
-                let backup_meta = fs::metadata(&latest_backup_path)?;
+                let backup_meta = fs::metadata(&lb_path)?;
                 
-                // Skip if same size (likely unchanged)
                 if vault_meta.len() == backup_meta.len() {
                     println!("[✔] Backup skipped (no changes detected)");
-                    return Ok((latest_backup.0.clone(), false));
+                    return Ok((last_back.0.clone(), false));
                 }
             }
         }
@@ -66,29 +62,27 @@ pub fn create_backup(
 
     use chrono::Local;
     let timestamp = Local::now().format("%Y-%m-%d_%H-%M-%S");
-    let backup_filename = format!("backup_{timestamp}.vault");
+    let back_fn = format!("backup_{timestamp}.vault");
 
-    let backup_dir = get_vault_backup_dir(vault_name);
+    let backup_dir = gvback_dir(vault_name);
     fs::create_dir_all(&backup_dir)?;
 
-    let backup_path = backup_dir.join(&backup_filename);
+    let backup_path = backup_dir.join(&back_fn);
 
-    // Copy vault to backup
     fs::copy(&vault_path, &backup_path)?;
 
-    println!("[✔] Backup created: {backup_filename}");
+    println!("[✔] Backup created: {back_fn}");
 
-    // Clean up old backups
-    cleanup_old_backups(vault_name, max_backups)?;
+    clean_obs(vault_name, max_backups)?;
 
-    Ok((backup_filename, true))
+    Ok((back_fn, true))
 }
 
 /// List all backups for a vault
-pub fn list_backups(
+pub fn ls_backs(
     vault_name: &str,
 ) -> Result<Vec<(String, u64, String)>, Box<dyn std::error::Error>> {
-    let backup_dir = get_vault_backup_dir(vault_name);
+    let backup_dir = gvback_dir(vault_name);
 
     if !backup_dir.exists() {
         return Ok(Vec::new());
@@ -114,23 +108,22 @@ pub fn list_backups(
         }
     }
 
-    // Sort by filename (timestamp) - newest first
     backups.sort_by(|a, b| b.0.cmp(&a.0));
 
     Ok(backups)
 }
 
-/// Restore vault from a backup
+/// Restore vault from a back
 pub fn restore_backup(
     vault_name: &str,
-    backup_filename: &str,
+    back_fn: &str,
     password: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let backup_dir = get_vault_backup_dir(vault_name);
-    let backup_path = backup_dir.join(backup_filename);
+    let backup_dir = gvback_dir(vault_name);
+    let backup_path = backup_dir.join(back_fn);
 
     if !backup_path.exists() {
-        return Err(format!("Backup file not found: {backup_filename}").into());
+        return Err(format!("Backup file not found: {back_fn}").into());
     }
 
     println!("[...] Verifying backup with password...");
@@ -138,16 +131,11 @@ pub fn restore_backup(
     let vault_path = crate::config::get_vault_path(vault_name);
     let temp_path = crate::config::get_passlock_dir().join(format!("{}.temp", vault_name));
     
-    // Copy backup to temp location
     fs::copy(&backup_path, &temp_path)?;
 
-    // Try to decrypt it (validates password)
-    // TODO: This needs to be updated to use vault_name parameter
     if storage::ld_vt(password).is_ok() {
-        // Password works! Restore it
         fs::remove_file(&temp_path)?;
 
-        // Safety backup of current vault
         if vault_path.exists() {
             let safety_backup = crate::config::get_passlock_dir()
                 .join(format!("{}.before_restore", vault_name));
@@ -155,9 +143,8 @@ pub fn restore_backup(
             println!("[✔] Current vault backed up to: {}.before_restore", vault_name);
         }
 
-        // Restore the backup
         fs::copy(&backup_path, &vault_path)?;
-        println!("[✔] Vault '{}' restored from: {}", vault_name, backup_filename);
+        println!("[✔] Vault '{}' restored from: {}", vault_name, back_fn);
 
         Ok(())
     } else {
@@ -166,15 +153,15 @@ pub fn restore_backup(
     }
 }
 
-/// Clean up old backups, keeping only the most recent N
-fn cleanup_old_backups(
+/// Clean up old backups, keeping recent N backs
+fn clean_obs(
     vault_name: &str,
     max_backups: usize,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let backups = list_backups(vault_name)?;
+    let backups = ls_backs(vault_name)?;
 
     if backups.len() > max_backups {
-        let backup_dir = get_vault_backup_dir(vault_name);
+        let backup_dir = gvback_dir(vault_name);
         let to_delete = &backups[max_backups..];
 
         for (filename, _, _) in to_delete {
@@ -187,13 +174,12 @@ fn cleanup_old_backups(
     Ok(())
 }
 
-/// Export vault to external location (encrypted)
+/// Export vault to external location
 pub fn export_vault(
     vault_name: &str,
     password: &str,
     output_path: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // Verify password
     let _vault = storage::ld_vt(password)?;
 
     let vault_path = crate::config::get_vault_path(vault_name);
@@ -206,12 +192,12 @@ pub fn export_vault(
 
     println!("[✔] Vault '{}' exported to: {}", vault_name, output_path);
     println!("[✔] Format: Encrypted PassLock vault");
-    println!("[!] Keep this file secure!");
+    println!("[!] Keep this file secure.");
 
     Ok(())
 }
 
-/// Import vault from external location (encrypted)
+/// Import vault from external location
 pub fn import_vault(
     vault_name: &str,
     password: &str,
@@ -230,11 +216,9 @@ pub fn import_vault(
 
     println!("[...] Verifying import file...");
 
-    // Try to decrypt
     if storage::ld_vt(password).is_ok() {
         fs::remove_file(&temp_path)?;
 
-        // Safety backup
         if vault_path.exists() {
             let safety_backup = crate::config::get_passlock_dir()
                 .join(format!("{}.before_import", vault_name));
@@ -242,7 +226,6 @@ pub fn import_vault(
             println!("[✔] Current vault backed up: {}.before_import", vault_name);
         }
 
-        // Import
         fs::copy(&import_path, &vault_path)?;
         println!("[✔] Vault '{}' imported from: {}", vault_name, input_path);
 
@@ -253,8 +236,8 @@ pub fn import_vault(
     }
 }
 
-/// Export to CSV (PLAINTEXT!)
-pub fn export_to_csv(
+/// Export to CSV
+pub fn export_csv(
     vault_name: &str,
     password: &str,
     output_path: &str,
@@ -264,30 +247,30 @@ pub fn export_to_csv(
     let mut csv_content = String::from("name,username,password,url,notes,tags,2fa_secret\n");
 
     for entry in &vault.e {
-        let name = escape_csv(&entry.n);
-        let username = escape_csv(&entry.u);
-        let password_val = escape_csv(&entry.p);
-        let url = entry.url.as_ref().map_or(String::new(), |u| escape_csv(u));
-        let notes = entry.nt.as_ref().map_or(String::new(), |n| escape_csv(n));
-        let tags = escape_csv(&entry.tags.join(";"));
-        let totp = entry.totp_secret.as_ref().map_or(String::new(), |t| escape_csv(t));
+        let name = esc_csv(&entry.n);
+        let username = esc_csv(&entry.u);
+        let password_val = esc_csv(&entry.p);
+        let url = entry.url.as_ref().map_or(String::new(), |u| esc_csv(u));
+        let notes = entry.nt.as_ref().map_or(String::new(), |n| esc_csv(n));
+        let tags = esc_csv(&entry.tags.join(";"));
+        let totp = entry.totp_secret.as_ref().map_or(String::new(), |t| esc_csv(t));
 
         csv_content.push_str(&format!(
-            "{name},{username},{password_val},{url},{notes},{tags},{totp}\n"
+            "{name},{username},{password_val},{url},{totp},{tags},{notes}\n"
         ));
     }
 
     fs::write(output_path, csv_content)?;
 
     println!("[✔] Vault '{}' exported to CSV: {}", vault_name, output_path);
-    println!("[!] WARNING: PLAINTEXT FILE - DELETE AFTER USE!");
+    println!("[!] WARNING: This is Plaintext, delete after use.");
     println!("[✔] {} entries exported", vault.e.len());
 
     Ok(())
 }
 
-/// Export to JSON (PLAINTEXT!)
-pub fn export_to_json(
+/// Export to JSON
+pub fn export_json(
     vault_name: &str,
     password: &str,
     output_path: &str,
@@ -327,14 +310,14 @@ pub fn export_to_json(
     fs::write(output_path, json_string)?;
 
     println!("[✔] Vault '{}' exported to JSON: {}", vault_name, output_path);
-    println!("[!] WARNING: PLAINTEXT FILE - DELETE AFTER USE!");
+    println!("[!] WARNING: This is Plaintext, delete after use.");
     println!("[✔] {} entries exported", vault.e.len());
 
     Ok(())
 }
 
 /// Import from CSV
-pub fn import_from_csv(
+pub fn import_csv(
     vault_name: &str,
     password: &str,
     input_path: &str,
@@ -348,7 +331,6 @@ pub fn import_from_csv(
     let reader = BufReader::new(file);
     let mut lines = reader.lines();
 
-    // Skip header
     if let Some(Ok(header)) = lines.next() {
         if !header.contains("name") || !header.contains("password") {
             return Err("Invalid CSV format".into());
@@ -401,7 +383,6 @@ pub fn import_from_csv(
         println!("[!] Skipped: {} invalid entries", skipped_count);
     }
 
-    // Auto-backup after import
     let config = crate::config::load_config()?;
     if config.auto_backup {
         create_backup(vault_name, config.max_backups, false)?;
@@ -411,7 +392,7 @@ pub fn import_from_csv(
 }
 
 /// Import from JSON
-pub fn import_from_json(
+pub fn import_json(
     vault_name: &str,
     password: &str,
     input_path: &str,
@@ -459,7 +440,6 @@ pub fn import_from_json(
     println!("[✔] Import completed to vault '{}'", vault_name);
     println!("[✔] Imported: {} entries", imported_count);
 
-    // Auto-backup after import
     let config = crate::config::load_config()?;
     if config.auto_backup {
         create_backup(vault_name, config.max_backups, false)?;
@@ -468,7 +448,7 @@ pub fn import_from_json(
     Ok(())
 }
 
-fn escape_csv(field: &str) -> String {
+fn esc_csv(field: &str) -> String {
     if field.contains(',') || field.contains('"') || field.contains('\n') {
         format!("\"{}\"", field.replace('"', "\"\""))
     } else {
