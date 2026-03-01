@@ -6,7 +6,8 @@ use crate::crypto;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
-    widgets::{Block, Borders, Clear, Paragraph, Wrap},
+    text::{Line, Span},
+    widgets::{Block, BorderType, Borders, Clear, Paragraph, Wrap},
     Frame,
 };
 
@@ -14,51 +15,83 @@ pub fn draw_loading(f: &mut Frame, size: Rect, app: &App) {
     let area = centered_rect(50, 30, size);
     let block = Block::default()
         .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(app.theme.yellow()))
-        .title(" PASSLOCK ")
-        .title_alignment(Alignment::Center)
+        .title(Span::styled(
+            " [ PassLock ] ",
+            Style::default()
+                .fg(app.theme.yellow())
+                .add_modifier(Modifier::BOLD),
+        ))
         .style(Style::default().bg(app.theme.bg0()));
-    let text = Paragraph::new("Initializing vault...")
-        .block(block)
-        .alignment(Alignment::Center)
-        .style(Style::default().fg(app.theme.fg()));
+
+    let text = Paragraph::new(vec![
+        Line::from(""),
+        Line::from(Span::styled(
+            "Initializing vault...",
+            Style::default()
+                .fg(app.theme.aqua())
+                .add_modifier(Modifier::BOLD),
+        )),
+        Line::from(""),
+        Line::from(Span::styled(
+            "Please wait",
+            Style::default().fg(app.theme.gray()),
+        )),
+    ])
+    .block(block)
+    .alignment(Alignment::Center);
+
     f.render_widget(Clear, area);
     f.render_widget(text, area);
 }
 
-#[allow(clippy::cast_sign_loss)]
+#[allow(clippy::cast_sign_loss, clippy::too_many_lines)]
 pub fn draw_create_vault(f: &mut Frame, size: Rect, app: &App) {
     let area = centered_rect(65, 70, size);
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .border_style(Style::default().fg(app.theme.orange()))
+        .title(Span::styled(
+            " [ Create Vault ] ",
+            Style::default()
+                .fg(app.theme.orange())
+                .add_modifier(Modifier::BOLD),
+        ))
+        .style(Style::default().bg(app.theme.bg0()));
+    f.render_widget(block, area);
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(2)
         .constraints([
             Constraint::Length(3),
+            Constraint::Length(2),
             Constraint::Length(1),
-            Constraint::Length(3),
-            Constraint::Length(3),
-            Constraint::Length(3),
+            Constraint::Length(2),
+            Constraint::Length(2),
+            Constraint::Length(2),
             Constraint::Length(1),
-            Constraint::Length(3),
             Constraint::Min(2),
-            Constraint::Length(3),
         ])
         .split(area);
 
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(app.theme.orange()))
-        .title("═══ CREATE VAULT ═══")
-        .title_alignment(Alignment::Center)
-        .style(Style::default().bg(app.theme.bg0()));
-    f.render_widget(block, area);
-
     let title = Paragraph::new("Create your master password")
-        .style(Style::default().fg(app.theme.yellow()))
+        .style(
+            Style::default()
+                .fg(app.theme.yellow())
+                .add_modifier(Modifier::BOLD),
+        )
         .alignment(Alignment::Center);
     f.render_widget(title, chunks[0]);
 
-    let pwd_text = format!("Password: {}", "•".repeat(app.input_buffer.len()));
+    let pwd_text = if app.input_buffer.is_empty() {
+        "Password: _".to_string()
+    } else {
+        format!("Password: {}", "•".repeat(app.input_buffer.len()))
+    };
     let pwd_style = if app.input_field == InputField::Password {
         Style::default()
             .fg(app.theme.green())
@@ -66,8 +99,10 @@ pub fn draw_create_vault(f: &mut Frame, size: Rect, app: &App) {
     } else {
         Style::default().fg(app.theme.gray())
     };
-    let password_input = Paragraph::new(pwd_text).style(pwd_style);
-    f.render_widget(password_input, chunks[2]);
+    let password_input = Paragraph::new(pwd_text)
+        .style(pwd_style)
+        .alignment(Alignment::Left);
+    f.render_widget(password_input, chunks[1]);
 
     if !app.input_buffer.is_empty() && app.input_field == InputField::Password {
         let strength = crypto::calc_pwd_strength(&app.input_buffer);
@@ -102,7 +137,11 @@ pub fn draw_create_vault(f: &mut Frame, size: Rect, app: &App) {
         }
     }
 
-    let confirm_text = format!("Confirm: {}", "•".repeat(app.input_buffer2.len()));
+    let confirm_text = if app.input_buffer2.is_empty() {
+        "Confirm: _".to_string()
+    } else {
+        format!("Confirm: {}", "•".repeat(app.input_buffer2.len()))
+    };
     let confirm_style = if app.input_field == InputField::PasswordConfirm {
         Style::default()
             .fg(app.theme.green())
@@ -110,7 +149,9 @@ pub fn draw_create_vault(f: &mut Frame, size: Rect, app: &App) {
     } else {
         Style::default().fg(app.theme.gray())
     };
-    let confirm_input = Paragraph::new(confirm_text).style(confirm_style);
+    let confirm_input = Paragraph::new(confirm_text)
+        .style(confirm_style)
+        .alignment(Alignment::Left);
     f.render_widget(confirm_input, chunks[6]);
 
     if !app.msg.is_empty() {
@@ -125,47 +166,57 @@ pub fn draw_create_vault(f: &mut Frame, size: Rect, app: &App) {
             .alignment(Alignment::Center);
         f.render_widget(msg, chunks[7]);
     }
-
-    let help = Paragraph::new("| Tab: Switch | Enter: Create | Esc: Quit |")
-        .style(Style::default().fg(app.theme.gray()))
-        .alignment(Alignment::Center);
-    f.render_widget(help, chunks[8]);
 }
 
 pub fn draw_unlock_vault(f: &mut Frame, size: Rect, app: &App) {
     let area = centered_rect(60, 40, size);
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .border_style(Style::default().fg(app.theme.aqua()))
+        .title(Span::styled(
+            " [ Unlock Vault ] ",
+            Style::default()
+                .fg(app.theme.aqua())
+                .add_modifier(Modifier::BOLD),
+        ))
+        .style(Style::default().bg(app.theme.bg0()));
+    f.render_widget(block, area);
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(2)
         .constraints([
             Constraint::Length(3),
+            Constraint::Length(2),
             Constraint::Length(1),
-            Constraint::Length(3),
             Constraint::Min(2),
-            Constraint::Length(3),
         ])
         .split(area);
 
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(app.theme.aqua()))
-        .title("═══ UNLOCK VAULT ═══")
-        .title_alignment(Alignment::Center)
-        .style(Style::default().bg(app.theme.bg0()));
-    f.render_widget(block, area);
-
     let title = Paragraph::new("Enter your master password")
-        .style(Style::default().fg(app.theme.yellow()))
+        .style(
+            Style::default()
+                .fg(app.theme.yellow())
+                .add_modifier(Modifier::BOLD),
+        )
         .alignment(Alignment::Center);
     f.render_widget(title, chunks[0]);
 
-    let pwd_text = format!("Password: {}", "•".repeat(app.input_buffer.len()));
-    let password_input = Paragraph::new(pwd_text).style(
-        Style::default()
-            .fg(app.theme.green())
-            .add_modifier(Modifier::BOLD),
-    );
-    f.render_widget(password_input, chunks[2]);
+    let pwd_text = if app.input_buffer.is_empty() {
+        "Password: _".to_string()
+    } else {
+        format!("Password: {}", "•".repeat(app.input_buffer.len()))
+    };
+    let password_input = Paragraph::new(pwd_text)
+        .style(
+            Style::default()
+                .fg(app.theme.green())
+                .add_modifier(Modifier::BOLD),
+        )
+        .alignment(Alignment::Left);
+    f.render_widget(password_input, chunks[1]);
 
     if !app.msg.is_empty() {
         let msg_style = match app.msg_type {
@@ -179,9 +230,4 @@ pub fn draw_unlock_vault(f: &mut Frame, size: Rect, app: &App) {
             .alignment(Alignment::Center);
         f.render_widget(msg, chunks[3]);
     }
-
-    let help = Paragraph::new("| Enter: Unlock | Esc: Quit |")
-        .style(Style::default().fg(app.theme.gray()))
-        .alignment(Alignment::Center);
-    f.render_widget(help, chunks[4]);
 }

@@ -591,10 +591,6 @@ pub fn handle_settings_screen(app: &mut App, key: KeyCode) {
                 .unwrap_or(0);
         }
         KeyCode::Char('2') => {
-            // auto save toggle (future feature)
-            app.set_msg("Auto-save coming soon!", MessageType::Info);
-        }
-        KeyCode::Char('3') => {
             app.clipboard_timeout = match app.clipboard_timeout {
                 10 => 30,
                 30 => 60,
@@ -610,6 +606,10 @@ pub fn handle_settings_screen(app: &mut App, key: KeyCode) {
                 format!("Clipboard timeout: {}s", app.clipboard_timeout)
             };
             app.set_msg(&msg, MessageType::Success);
+        }
+        KeyCode::Char('3') => {
+            // auto save toggle (future feature)
+            app.set_msg("Auto-save coming soon!", MessageType::Info);
         }
         KeyCode::Enter => match app.settings_menu_index {
             0 => {
@@ -629,9 +629,6 @@ pub fn handle_settings_screen(app: &mut App, key: KeyCode) {
                 };
             }
             1 => {
-                app.set_msg("Auto-save coming soon!", MessageType::Info);
-            }
-            2 => {
                 app.clipboard_timeout = match app.clipboard_timeout {
                     10 => 30,
                     30 => 60,
@@ -647,6 +644,9 @@ pub fn handle_settings_screen(app: &mut App, key: KeyCode) {
                     format!("Clipboard timeout: {}s", app.clipboard_timeout)
                 };
                 app.set_msg(&msg, MessageType::Success);
+            }
+            2 => {
+                app.set_msg("Auto-save coming soon!", MessageType::Info);
             }
             _ => {}
         },

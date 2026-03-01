@@ -7,7 +7,7 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
+    widgets::{Block, BorderType, Borders, List, ListItem, Paragraph, Wrap},
     Frame,
 };
 
@@ -15,22 +15,24 @@ use ratatui::{
 pub fn draw_view_pwds(f: &mut Frame, size: Rect, app: &mut App) {
     app.entry_row_map.clear();
 
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .margin(1)
-        .constraints([
-            Constraint::Length(3),
-            Constraint::Min(5),
-            Constraint::Length(3),
-        ])
-        .split(size);
     let block = Block::default()
         .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(app.theme.green()))
-        .title("═══ PASSWORDS ═══")
-        .title_alignment(Alignment::Center)
+        .title(Span::styled(
+            " [ Passwords ] ",
+            Style::default()
+                .fg(app.theme.green())
+                .add_modifier(Modifier::BOLD),
+        ))
         .style(Style::default().bg(app.theme.bg0()));
-    f.render_widget(block.clone(), size);
+    f.render_widget(block, size);
+
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .margin(2)
+        .constraints([Constraint::Length(4), Constraint::Min(5)])
+        .split(size);
 
     let filter_status = if let Some(ref tag) = app.active_tf {
         format!(" (Filtered by: {tag})")
@@ -43,7 +45,7 @@ pub fn draw_view_pwds(f: &mut Frame, size: Rect, app: &mut App) {
     let clipboard_status = if let Some(expires_at) = app.clipboard_countdown {
         let now = crate::get_timestamp();
         if expires_at > now {
-            format!(" | Clipboard clears in {}s", expires_at - now)
+            format!(" │ Clipboard: {}s", expires_at - now)
         } else {
             String::new()
         }
@@ -51,26 +53,61 @@ pub fn draw_view_pwds(f: &mut Frame, size: Rect, app: &mut App) {
         String::new()
     };
 
-    let title = Paragraph::new(format!(
-        "Total: {} entries{}{} | Right-click entry for options",
-        app.entry_disp.len(),
-        filter_status,
-        clipboard_status
-    ))
-    .style(Style::default().fg(app.theme.yellow()))
-    .alignment(Alignment::Center);
+    let title = Paragraph::new(vec![
+        Line::from(vec![
+            Span::styled(
+                format!("Total: {} entries", app.entry_disp.len()),
+                Style::default()
+                    .fg(app.theme.yellow())
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(filter_status, Style::default().fg(app.theme.purple())),
+            Span::styled(clipboard_status, Style::default().fg(app.theme.aqua())),
+        ]),
+        Line::from(""),
+        Line::from(vec![Span::styled(
+            "Right-click for options",
+            Style::default().fg(app.theme.gray()),
+        )]),
+    ])
+    .alignment(Alignment::Center)
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded)
+            .border_style(Style::default().fg(app.theme.gray())),
+    );
     f.render_widget(title, chunks[0]);
 
     if app.entry_disp.is_empty() {
-        let empty = if app.active_tf.is_some() || !app.search_query.is_empty() {
-            "[ No matching entries found ]"
+        let empty_area = centered_rect(60, 20, chunks[1]);
+        let empty_msg = if app.active_tf.is_some() || !app.search_query.is_empty() {
+            "No matching entries found"
         } else {
-            "[ No passwords saved yet ]"
+            "No passwords saved yet"
         };
-        let empty_paragraph = Paragraph::new(empty)
-            .style(Style::default().fg(app.theme.gray()))
-            .alignment(Alignment::Center);
-        f.render_widget(empty_paragraph, chunks[1]);
+        let empty = Paragraph::new(vec![
+            Line::from(""),
+            Line::from(Span::styled(
+                empty_msg,
+                Style::default()
+                    .fg(app.theme.gray())
+                    .add_modifier(Modifier::BOLD),
+            )),
+            Line::from(""),
+            Line::from(Span::styled(
+                "Press '2' to add your first password",
+                Style::default().fg(app.theme.gray()),
+            )),
+        ])
+        .alignment(Alignment::Center)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(app.theme.gray())),
+        );
+        f.render_widget(empty, empty_area);
     } else {
         let content_area_top = chunks[1].y;
         let mut current_row = content_area_top;
@@ -207,71 +244,108 @@ pub fn draw_view_pwds(f: &mut Frame, size: Rect, app: &mut App) {
         let list = List::new(items).block(Block::default().borders(Borders::NONE));
         f.render_widget(list, chunks[1]);
     }
-    let help = Paragraph::new("| F: Clear filter │ Esc: Back |")
-        .style(Style::default().fg(app.theme.gray()))
-        .alignment(Alignment::Center);
-    f.render_widget(help, chunks[2]);
 }
 
 #[allow(clippy::too_many_lines, clippy::cast_sign_loss)]
 pub fn draw_add_pwd(f: &mut Frame, size: Rect, app: &App) {
     let area = centered_rect(80, 85, size);
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .border_style(Style::default().fg(app.theme.green()))
+        .title(Span::styled(
+            " [ Add New Password ] ",
+            Style::default()
+                .fg(app.theme.green())
+                .add_modifier(Modifier::BOLD),
+        ))
+        .style(Style::default().bg(app.theme.bg0()));
+    f.render_widget(block, area);
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(2)
         .constraints([
             Constraint::Length(2), // 0: title
             Constraint::Length(1), // 1: spacer
-            Constraint::Length(2), // 2: name
-            Constraint::Length(2), // 3: username
-            Constraint::Length(2), // 4: pwd
+            Constraint::Length(3), // 2: name
+            Constraint::Length(3), // 3: username
+            Constraint::Length(3), // 4: pwd
             Constraint::Length(2), // 5: strength bar
-            Constraint::Length(2), // 6: strength feedbkac
-            Constraint::Length(2), // 7: url
-            Constraint::Length(2), // 8: totp
-            Constraint::Length(2), // 9: tags input
+            Constraint::Length(2), // 6: strength feedback
+            Constraint::Length(3), // 7: url
+            Constraint::Length(3), // 8: totp
+            Constraint::Length(3), // 9: tags input
             Constraint::Length(3), // 10: Tags display
-            Constraint::Length(4), // 11: notes
-            Constraint::Min(1),    // 12: msg
-            Constraint::Length(2), // 13: help
+            Constraint::Min(4),    // 11: notes
+            Constraint::Length(3), // 12: msg
         ])
         .split(area);
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(app.theme.green()))
-        .title("═══ ADD NEW PASSWORD ═══")
-        .title_alignment(Alignment::Center)
-        .style(Style::default().bg(app.theme.bg0()));
-    f.render_widget(block, area);
+
     let title = Paragraph::new("Fill in the details below")
         .style(Style::default().fg(app.theme.yellow()))
         .alignment(Alignment::Center);
     f.render_widget(title, chunks[0]);
+
     let active_style = Style::default()
         .fg(app.theme.green())
         .add_modifier(Modifier::BOLD);
     let inactive_style = Style::default().fg(app.theme.gray());
-    let name_field =
-        Paragraph::new(format!("Name: {}", app.n_entry_name)).style(if app.add_fi == 0 {
+
+    let name_field = Paragraph::new(format!("Name: {}", app.n_entry_name))
+        .style(if app.add_fi == 0 {
             active_style
         } else {
             inactive_style
-        });
+        })
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(if app.add_fi == 0 {
+                    app.theme.green()
+                } else {
+                    app.theme.gray()
+                })),
+        );
     f.render_widget(name_field, chunks[2]);
-    let user_field =
-        Paragraph::new(format!("Username: {}", app.n_entry_user)).style(if app.add_fi == 1 {
+
+    let user_field = Paragraph::new(format!("Username: {}", app.n_entry_user))
+        .style(if app.add_fi == 1 {
             active_style
         } else {
             inactive_style
-        });
+        })
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(if app.add_fi == 1 {
+                    app.theme.green()
+                } else {
+                    app.theme.gray()
+                })),
+        );
     f.render_widget(user_field, chunks[3]);
-    let pass_field =
-        Paragraph::new(format!("Password: {}", app.n_entry_pass)).style(if app.add_fi == 2 {
+
+    let pass_field = Paragraph::new(format!("Password: {}", app.n_entry_pass))
+        .style(if app.add_fi == 2 {
             active_style
         } else {
             inactive_style
-        });
+        })
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(if app.add_fi == 2 {
+                    app.theme.green()
+                } else {
+                    app.theme.gray()
+                })),
+        );
     f.render_widget(pass_field, chunks[4]);
+
     if !app.n_entry_pass.is_empty() && app.add_fi == 2 {
         let strength = crypto::calc_pwd_strength(&app.n_entry_pass);
         let strength_color = match strength.strength.as_str() {
@@ -294,6 +368,7 @@ pub fn draw_add_pwd(f: &mut Frame, size: Rect, app: &App) {
             .style(Style::default().fg(strength_color))
             .alignment(Alignment::Center);
         f.render_widget(strength_display, chunks[5]);
+
         if !strength.feedback.is_empty() {
             let feedback_text = format!("↳ {}", strength.feedback.join(", "));
             let feedback = Paragraph::new(feedback_text)
@@ -303,21 +378,41 @@ pub fn draw_add_pwd(f: &mut Frame, size: Rect, app: &App) {
             f.render_widget(feedback, chunks[6]);
         }
     }
-    let url_field =
-        Paragraph::new(format!("URL (optional): {}", app.n_entry_url)).style(if app.add_fi == 3 {
+
+    let url_field = Paragraph::new(format!("URL (optional): {}", app.n_entry_url))
+        .style(if app.add_fi == 3 {
             active_style
         } else {
             inactive_style
-        });
+        })
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(if app.add_fi == 3 {
+                    app.theme.green()
+                } else {
+                    app.theme.gray()
+                })),
+        );
     f.render_widget(url_field, chunks[7]);
 
-    let totp_field = Paragraph::new(format!("2FA Secret (optional): {}", app.n_entry_totp)).style(
-        if app.add_fi == 4 {
+    let totp_field = Paragraph::new(format!("2FA Secret (optional): {}", app.n_entry_totp))
+        .style(if app.add_fi == 4 {
             active_style
         } else {
             inactive_style
-        },
-    );
+        })
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(if app.add_fi == 4 {
+                    app.theme.green()
+                } else {
+                    app.theme.gray()
+                })),
+        );
     f.render_widget(totp_field, chunks[8]);
 
     let tags_text = if app.add_fi == 5 {
@@ -331,8 +426,19 @@ pub fn draw_add_pwd(f: &mut Frame, size: Rect, app: &App) {
         } else {
             inactive_style
         })
-        .wrap(Wrap { trim: true });
+        .wrap(Wrap { trim: true })
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(if app.add_fi == 5 {
+                    app.theme.green()
+                } else {
+                    app.theme.gray()
+                })),
+        );
     f.render_widget(tags_input, chunks[9]);
+
     if !app.n_entry_tags.is_empty() {
         let tags_display = app
             .n_entry_tags
@@ -346,14 +452,36 @@ pub fn draw_add_pwd(f: &mut Frame, size: Rect, app: &App) {
             .wrap(Wrap { trim: true });
         f.render_widget(tags_widget, chunks[10]);
     }
-    let notes = Paragraph::new(format!("Notes:\n{}", app.n_entry_notes))
-        .style(if app.add_fi == 5 {
+
+    let notes_lines: Vec<Line> = if app.n_entry_notes.is_empty() {
+        vec![Line::from("Notes:")]
+    } else {
+        let mut lines = vec![Line::from("Notes:")];
+        for line in app.n_entry_notes.lines() {
+            lines.push(Line::from(line.to_string()));
+        }
+        lines
+    };
+
+    let notes = Paragraph::new(notes_lines)
+        .style(if app.add_fi == 6 {
             active_style
         } else {
             inactive_style
         })
-        .wrap(Wrap { trim: false });
+        .wrap(Wrap { trim: false })
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(if app.add_fi == 6 {
+                    app.theme.green()
+                } else {
+                    app.theme.gray()
+                })),
+        );
     f.render_widget(notes, chunks[11]);
+
     if !app.msg.is_empty() {
         let msg_style = match app.msg_type {
             MessageType::Success => Style::default().fg(app.theme.green()),
@@ -366,72 +494,108 @@ pub fn draw_add_pwd(f: &mut Frame, size: Rect, app: &App) {
             .alignment(Alignment::Center);
         f.render_widget(msg, chunks[12]);
     }
-    let help =
-        Paragraph::new("| Tab: Next field │ Enter: Add tag/Save │ 1-9: Remove tag │ Esc: Cancel |")
-            .style(Style::default().fg(app.theme.gray()))
-            .alignment(Alignment::Center);
-    f.render_widget(help, chunks[13]);
 }
 
 #[allow(clippy::too_many_lines, clippy::cast_sign_loss)]
 pub fn draw_edit_pwd(f: &mut Frame, size: Rect, app: &App) {
     let area = centered_rect(80, 85, size);
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .border_style(Style::default().fg(app.theme.orange()))
+        .title(Span::styled(
+            " [ Edit Password ] ",
+            Style::default()
+                .fg(app.theme.orange())
+                .add_modifier(Modifier::BOLD),
+        ))
+        .style(Style::default().bg(app.theme.bg0()));
+    f.render_widget(block, area);
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(2)
         .constraints([
             Constraint::Length(2), // 0: title
             Constraint::Length(1), // 1: spacer
-            Constraint::Length(2), // 2: name
-            Constraint::Length(2), // 3: username
-            Constraint::Length(2), // 4: pwd
+            Constraint::Length(3), // 2: name
+            Constraint::Length(3), // 3: username
+            Constraint::Length(3), // 4: pwd
             Constraint::Length(2), // 5: strength bar
             Constraint::Length(2), // 6: strength feedback
-            Constraint::Length(2), // 7: url
-            Constraint::Length(2), // 8: totp
-            Constraint::Length(2), // 9: tags input
+            Constraint::Length(3), // 7: url
+            Constraint::Length(3), // 8: totp
+            Constraint::Length(3), // 9: tags input
             Constraint::Length(3), // 10: tags display
-            Constraint::Length(4), // 11: notes
-            Constraint::Min(1),    // 12: msg
-            Constraint::Length(2), // 13: help
+            Constraint::Min(4),    // 11: notes
+            Constraint::Length(3), // 12: msg
         ])
         .split(area);
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(app.theme.orange()))
-        .title("═══ EDIT PASSWORD ═══")
-        .title_alignment(Alignment::Center)
-        .style(Style::default().bg(app.theme.bg0()));
-    f.render_widget(block, area);
+
     let title = Paragraph::new("Edit entry details (password changes are tracked)")
         .style(Style::default().fg(app.theme.yellow()))
         .alignment(Alignment::Center);
     f.render_widget(title, chunks[0]);
+
     let active_style = Style::default()
         .fg(app.theme.green())
         .add_modifier(Modifier::BOLD);
     let inactive_style = Style::default().fg(app.theme.gray());
-    let name_field =
-        Paragraph::new(format!("Name: {}", app.n_entry_name)).style(if app.add_fi == 0 {
+
+    let name_field = Paragraph::new(format!("Name: {}", app.n_entry_name))
+        .style(if app.add_fi == 0 {
             active_style
         } else {
             inactive_style
-        });
+        })
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(if app.add_fi == 0 {
+                    app.theme.green()
+                } else {
+                    app.theme.gray()
+                })),
+        );
     f.render_widget(name_field, chunks[2]);
-    let user_field =
-        Paragraph::new(format!("Username: {}", app.n_entry_user)).style(if app.add_fi == 1 {
+
+    let user_field = Paragraph::new(format!("Username: {}", app.n_entry_user))
+        .style(if app.add_fi == 1 {
             active_style
         } else {
             inactive_style
-        });
+        })
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(if app.add_fi == 1 {
+                    app.theme.green()
+                } else {
+                    app.theme.gray()
+                })),
+        );
     f.render_widget(user_field, chunks[3]);
-    let pass_field =
-        Paragraph::new(format!("Password: {}", app.n_entry_pass)).style(if app.add_fi == 2 {
+
+    let pass_field = Paragraph::new(format!("Password: {}", app.n_entry_pass))
+        .style(if app.add_fi == 2 {
             active_style
         } else {
             inactive_style
-        });
+        })
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(if app.add_fi == 2 {
+                    app.theme.green()
+                } else {
+                    app.theme.gray()
+                })),
+        );
     f.render_widget(pass_field, chunks[4]);
+
     if !app.n_entry_pass.is_empty() && app.add_fi == 2 {
         let strength = crypto::calc_pwd_strength(&app.n_entry_pass);
         let strength_color = match strength.strength.as_str() {
@@ -454,6 +618,7 @@ pub fn draw_edit_pwd(f: &mut Frame, size: Rect, app: &App) {
             .style(Style::default().fg(strength_color))
             .alignment(Alignment::Center);
         f.render_widget(strength_display, chunks[5]);
+
         if !strength.feedback.is_empty() {
             let feedback_text = format!("↳ {}", strength.feedback.join(", "));
             let feedback = Paragraph::new(feedback_text)
@@ -463,20 +628,41 @@ pub fn draw_edit_pwd(f: &mut Frame, size: Rect, app: &App) {
             f.render_widget(feedback, chunks[6]);
         }
     }
-    let url_field = Paragraph::new(format!("URL: {}", app.n_entry_url)).style(if app.add_fi == 3 {
-        active_style
-    } else {
-        inactive_style
-    });
-    f.render_widget(url_field, chunks[7]);
 
-    let totp_field = Paragraph::new(format!("2FA Secret (optional): {}", app.n_entry_totp)).style(
-        if app.add_fi == 4 {
+    let url_field = Paragraph::new(format!("URL: {}", app.n_entry_url))
+        .style(if app.add_fi == 3 {
             active_style
         } else {
             inactive_style
-        },
-    );
+        })
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(if app.add_fi == 3 {
+                    app.theme.green()
+                } else {
+                    app.theme.gray()
+                })),
+        );
+    f.render_widget(url_field, chunks[7]);
+
+    let totp_field = Paragraph::new(format!("2FA Secret (optional): {}", app.n_entry_totp))
+        .style(if app.add_fi == 4 {
+            active_style
+        } else {
+            inactive_style
+        })
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(if app.add_fi == 4 {
+                    app.theme.green()
+                } else {
+                    app.theme.gray()
+                })),
+        );
     f.render_widget(totp_field, chunks[8]);
 
     let tags_text = if app.add_fi == 5 {
@@ -490,8 +676,19 @@ pub fn draw_edit_pwd(f: &mut Frame, size: Rect, app: &App) {
         } else {
             inactive_style
         })
-        .wrap(Wrap { trim: true });
+        .wrap(Wrap { trim: true })
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(if app.add_fi == 5 {
+                    app.theme.green()
+                } else {
+                    app.theme.gray()
+                })),
+        );
     f.render_widget(tags_input, chunks[9]);
+
     if !app.n_entry_tags.is_empty() {
         let tags_display = app
             .n_entry_tags
@@ -505,14 +702,36 @@ pub fn draw_edit_pwd(f: &mut Frame, size: Rect, app: &App) {
             .wrap(Wrap { trim: true });
         f.render_widget(tags_widget, chunks[10]);
     }
-    let notes = Paragraph::new(format!("Notes:\n{}", app.n_entry_notes))
+
+    let notes_lines: Vec<Line> = if app.n_entry_notes.is_empty() {
+        vec![Line::from("Notes:")]
+    } else {
+        let mut lines = vec![Line::from("Notes:")];
+        for line in app.n_entry_notes.lines() {
+            lines.push(Line::from(line.to_string()));
+        }
+        lines
+    };
+
+    let notes = Paragraph::new(notes_lines)
         .style(if app.add_fi == 6 {
             active_style
         } else {
             inactive_style
         })
-        .wrap(Wrap { trim: false });
+        .wrap(Wrap { trim: false })
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(if app.add_fi == 6 {
+                    app.theme.green()
+                } else {
+                    app.theme.gray()
+                })),
+        );
     f.render_widget(notes, chunks[11]);
+
     if !app.msg.is_empty() {
         let msg_style = match app.msg_type {
             MessageType::Success => Style::default().fg(app.theme.green()),
@@ -525,44 +744,73 @@ pub fn draw_edit_pwd(f: &mut Frame, size: Rect, app: &App) {
             .alignment(Alignment::Center);
         f.render_widget(msg, chunks[12]);
     }
-    let help =
-        Paragraph::new("| Tab: Next │ Enter: Add tag/Save │ 1-9: Remove tag │ Esc: Cancel |")
-            .style(Style::default().fg(app.theme.gray()))
-            .alignment(Alignment::Center);
-    f.render_widget(help, chunks[13]);
 }
 
 pub fn draw_history(f: &mut Frame, size: Rect, app: &App) {
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .margin(1)
-        .constraints([
-            Constraint::Length(3),
-            Constraint::Min(5),
-            Constraint::Length(3),
-        ])
-        .split(size);
     let block = Block::default()
         .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(app.theme.purple()))
-        .title("═══ PASSWORD HISTORY ═══")
-        .title_alignment(Alignment::Center)
+        .title(Span::styled(
+            " [ Password History ] ",
+            Style::default()
+                .fg(app.theme.purple())
+                .add_modifier(Modifier::BOLD),
+        ))
         .style(Style::default().bg(app.theme.bg0()));
     f.render_widget(block, size);
+
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .margin(2)
+        .constraints([Constraint::Length(3), Constraint::Min(5)])
+        .split(size);
+
     if let Some(ref vault) = app.vault {
         if app.selected_entry < app.entry_disp.len() {
             let entry = &app.entry_disp[app.selected_entry];
             if let Some(vault_entry) = vault.e.iter().find(|e| e.id == entry.id) {
-                let title =
-                    Paragraph::new(format!("History for: {} (Last 5 changes)", vault_entry.n))
-                        .style(Style::default().fg(app.theme.yellow()))
-                        .alignment(Alignment::Center);
+                let title = Paragraph::new(vec![
+                    Line::from(vec![Span::styled(
+                        format!("History for: {}", vault_entry.n),
+                        Style::default()
+                            .fg(app.theme.yellow())
+                            .add_modifier(Modifier::BOLD),
+                    )]),
+                    Line::from(""),
+                    Line::from(vec![Span::styled(
+                        "Last 5 changes",
+                        Style::default().fg(app.theme.gray()),
+                    )]),
+                ])
+                .alignment(Alignment::Center)
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_type(BorderType::Rounded)
+                        .border_style(Style::default().fg(app.theme.gray())),
+                );
                 f.render_widget(title, chunks[0]);
+
                 if vault_entry.history.is_empty() {
-                    let empty = Paragraph::new("[ No password changes recorded ]")
-                        .style(Style::default().fg(app.theme.gray()))
-                        .alignment(Alignment::Center);
-                    f.render_widget(empty, chunks[1]);
+                    let empty_area = centered_rect(60, 20, chunks[1]);
+                    let empty = Paragraph::new(vec![
+                        Line::from(""),
+                        Line::from(Span::styled(
+                            "No password changes recorded",
+                            Style::default()
+                                .fg(app.theme.gray())
+                                .add_modifier(Modifier::BOLD),
+                        )),
+                    ])
+                    .alignment(Alignment::Center)
+                    .block(
+                        Block::default()
+                            .borders(Borders::ALL)
+                            .border_type(BorderType::Rounded)
+                            .border_style(Style::default().fg(app.theme.gray())),
+                    );
+                    f.render_widget(empty, empty_area);
                 } else {
                     let items: Vec<ListItem> = vault_entry
                         .history
@@ -600,72 +848,103 @@ pub fn draw_history(f: &mut Frame, size: Rect, app: &App) {
             }
         }
     }
-    let help = Paragraph::new("| Esc: Back |")
-        .style(Style::default().fg(app.theme.gray()))
-        .alignment(Alignment::Center);
-    f.render_widget(help, chunks[2]);
 }
 
 pub fn draw_del_pwd(f: &mut Frame, size: Rect, app: &App) {
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .border_style(Style::default().fg(app.theme.red()))
+        .title(Span::styled(
+            " [ Delete Password ] ",
+            Style::default()
+                .fg(app.theme.red())
+                .add_modifier(Modifier::BOLD),
+        ))
+        .style(Style::default().bg(app.theme.bg0()));
+    f.render_widget(block, size);
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .margin(1)
+        .margin(2)
         .constraints([
             Constraint::Length(3),
             Constraint::Min(5),
             Constraint::Length(3),
-            Constraint::Length(3),
         ])
         .split(size);
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(app.theme.red()))
-        .title("═══ DELETE PASSWORD ═══")
-        .title_alignment(Alignment::Center)
-        .style(Style::default().bg(app.theme.bg0()));
-    f.render_widget(block, size);
+
     let title = Paragraph::new("⚠ Enter the number of the entry to delete")
         .style(Style::default().fg(app.theme.orange()))
-        .alignment(Alignment::Center);
+        .alignment(Alignment::Center)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(app.theme.orange())),
+        );
     f.render_widget(title, chunks[0]);
+
     let empty_vec = Vec::new();
     let entries_to_display = if app.entry_disp.is_empty() {
         app.vault.as_ref().map_or(&empty_vec, |v| &v.e)
     } else {
         &app.entry_disp
     };
+
     if entries_to_display.is_empty() {
-        let empty = Paragraph::new("[ No passwords to delete ]")
-            .style(Style::default().fg(app.theme.gray()))
-            .alignment(Alignment::Center);
-        f.render_widget(empty, chunks[1]);
+        let empty_area = centered_rect(60, 20, chunks[1]);
+        let empty = Paragraph::new(vec![
+            Line::from(""),
+            Line::from(Span::styled(
+                "No passwords to delete",
+                Style::default()
+                    .fg(app.theme.gray())
+                    .add_modifier(Modifier::BOLD),
+            )),
+        ])
+        .alignment(Alignment::Center)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(app.theme.gray())),
+        );
+        f.render_widget(empty, empty_area);
     } else {
         let items: Vec<ListItem> = entries_to_display
             .iter()
             .enumerate()
             .map(|(i, entry)| {
-                ListItem::new(Line::from(vec![
-                    Span::styled(
-                        format!("[{}] ", i + 1),
-                        Style::default().fg(app.theme.red()),
-                    ),
-                    Span::styled(&entry.n, Style::default().fg(app.theme.fg())),
-                ]))
+                ListItem::new(vec![
+                    Line::from(vec![
+                        Span::styled(
+                            format!("[{}] ", i + 1),
+                            Style::default().fg(app.theme.red()),
+                        ),
+                        Span::styled(&entry.n, Style::default().fg(app.theme.fg())),
+                    ]),
+                    Line::from(""),
+                ])
             })
             .collect();
         let list = List::new(items).block(Block::default().borders(Borders::NONE));
         f.render_widget(list, chunks[1]);
     }
-    let input = Paragraph::new(format!("Entry number: {}", app.input_buffer)).style(
-        Style::default()
-            .fg(app.theme.red())
-            .add_modifier(Modifier::BOLD),
-    );
+
+    let input = Paragraph::new(format!("Entry number: {}", app.input_buffer))
+        .style(
+            Style::default()
+                .fg(app.theme.red())
+                .add_modifier(Modifier::BOLD),
+        )
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(app.theme.red())),
+        );
     f.render_widget(input, chunks[2]);
-    let help = Paragraph::new("Type number │ Enter: Delete │ Esc: Cancel")
-        .style(Style::default().fg(app.theme.gray()))
-        .alignment(Alignment::Center);
-    f.render_widget(help, chunks[3]);
 }
 
 pub fn draw_context_menu(f: &mut Frame, app: &App) {
@@ -728,6 +1007,7 @@ pub fn draw_context_menu(f: &mut Frame, app: &App) {
 
     let block = Block::default()
         .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(orange))
         .style(Style::default().bg(bg1));
 
