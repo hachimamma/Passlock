@@ -42,7 +42,7 @@ jobs:
 
     - name: Test CLI create command
       run: |
-        ./target/release/passlock create testpassword123
+        ./target/release/passlock vault create myVault mySecurePass123
         
         if [ ! -f ~/.passlock.vault ]; then
           echo "Vault file not created"
@@ -52,7 +52,7 @@ jobs:
 
     - name: Test CLI unlock command
       run: |
-        ./target/release/passlock unlock testpassword123
+        ./target/release/passlock unlock mySecurePass123
         
         if [ ! -f ~/.passlock.temp ]; then
           echo "Temp file not created"
