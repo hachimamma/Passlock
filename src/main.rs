@@ -648,6 +648,20 @@ fn print_usage() {
     println!("  info [cpu]                       Show system information");
     println!("  version                          Show version");
     println!("  help                             Show this help");
+    println!("COMMANDS:");
+    println!("  create <password>   Create a new vault");
+    println!("  unlock <password>   Unlock and verify vault");
+    println!("  sync <password>     Sync vault changes");
+    println!("  tui                 Launch TUI interface");
+    println!("  info [cpu]          Show system information");
+    println!("  version             Show version");
+    println!("  help                Show this help");
     println!();
     println!("For more info: https://github.com/hachimamma/Passlock/blob/main/README.md");
+    println!("EXAMPLES:");
+    println!("  passlock create mySecurePassword123");
+    println!("  passlock tui");
+    println!("  passlock info cpu");
+    println!();
+    println!("For more info: https://github.com/hachimamma/Passlock");
 }
