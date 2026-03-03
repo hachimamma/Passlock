@@ -630,10 +630,7 @@ fn handle_icmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn print_usage() {
-    println!(
-        "PassLock v{}",
-        env!("CARGO_PKG_VERSION")
-    );
+    println!("PassLock v{}", env!("CARGO_PKG_VERSION"));
     println!();
     println!("USAGE:");
     println!("  passlock <COMMAND> [OPTIONS]");
