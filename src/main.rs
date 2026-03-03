@@ -37,13 +37,12 @@ pub fn get_timestamp() -> u64 {
         .as_secs()
 }
 
-#[allow(clippy::too_many_lines)]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     crypto::init_crypto()?;
-
+    
     config::init_passlock_dirs()?;
     backup::init_bsys()?;
-
+    
     let cfg = config::load_config().unwrap_or_default();
     let active_vault = cfg.active_vault.clone();
 
@@ -75,7 +74,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             "export" => {
                 if args.len() < 4 {
-                    eprintln!("Usage: passlock export <password> <output_file>");
+                    eprintln!("Usage: passlock export <password> <output-file>");
                     eprintln!();
                     eprintln!("Export encrypted vault for backup/transfer.");
                     eprintln!("Works with ANY path on ANY device!");
@@ -92,7 +91,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             "import" => {
                 if args.len() < 4 {
-                    eprintln!("Usage: passlock import <password> <input_file>");
+                    eprintln!("Usage: passlock import <password> <input-file>");
                     eprintln!();
                     eprintln!("Import encrypted vault from backup.");
                     eprintln!("Works with ANY path on ANY device!");
@@ -100,7 +99,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     eprintln!("Examples:");
                     eprintln!("  passlock import myPass123 ~/Documents/backup.vault");
                     eprintln!("  passlock import myPass123 /media/usb/backup.vault");
-                    eprintln!("  passlock import myPass123 ~/Dropbox/backup.vault");
                     std::process::exit(1);
                 }
                 let password = &args[2];
@@ -109,12 +107,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             "export-csv" => {
                 if args.len() < 4 {
-                    eprintln!("Usage: passlock export_csv <password> <output_file.csv>");
+                    eprintln!("Usage: passlock export-csv <password> <output-file.csv>");
                     eprintln!();
                     eprintln!("WARNING: Creates UNENCRYPTED CSV with plaintext passwords!");
-                    eprintln!(
-                        "Use for importing to other password managers (LastPass, Bitwarden, etc.)"
-                    );
+                    eprintln!("Use for importing to other password managers (LastPass, Bitwarden, etc.)");
                     eprintln!();
                     eprintln!("Example:");
                     eprintln!("  passlock export-csv myPass123 ~/passwords.csv");
@@ -126,7 +122,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             "export-json" => {
                 if args.len() < 4 {
-                    eprintln!("Usage: passlock export_json <password> <output_file.json>");
+                    eprintln!("Usage: passlock export-json <password> <output-file.json>");
                     eprintln!();
                     eprintln!("WARNING: Creates UNENCRYPTED JSON with plaintext passwords!");
                     eprintln!("Use for importing to other password managers.");
@@ -141,7 +137,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             "import-csv" => {
                 if args.len() < 4 {
-                    eprintln!("Usage: passlock import-csv <password> <input_file.csv>");
+                    eprintln!("Usage: passlock import-csv <password> <input-file.csv>");
                     eprintln!();
                     eprintln!("Import passwords from CSV file (LastPass, Bitwarden, etc.)");
                     eprintln!("Expected format: name,username,password,url,notes,tags,2fa_secret");
@@ -156,7 +152,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             "import-json" => {
                 if args.len() < 4 {
-                    eprintln!("Usage: passlock import_json <password> <input_file.json>");
+                    eprintln!("Usage: passlock import-json <password> <input-file.json>");
                     eprintln!();
                     eprintln!("Import passwords from JSON file.");
                     eprintln!();
@@ -217,47 +213,39 @@ fn sync_vault(password: &str) -> Result<(), Box<dyn std::error::Error>> {
     storage::svv(&vault, password)?;
 
     println!("[✔] Vault synced successfully.");
-
+    
     println!("[...] Creating backup...");
     let cfg = config::load_config().unwrap_or_default();
     backup::create_backup(&cfg.active_vault, cfg.max_backups, false)?;
-
+    
     Ok(())
 }
 
-/// Automatically backups vault after TUI closes
+/// Automatically backup vault after TUI closes
 /// Called by TUI when exiting
 /// Only creates backup if vault was modified
-///
-/// # Errors
-/// Returns an error if:
-/// * Backup creation fails
-/// * Configuration cannot be loaded
-/// * Vault cannot be accessed
 pub fn auto_back() -> Result<(), Box<dyn std::error::Error>> {
     let cfg = config::load_config().unwrap_or_default();
-
+    
     if !cfg.auto_backup {
         return Ok(());
     }
-
+    
     if !config::vault_exists(&cfg.active_vault) {
         return Ok(());
     }
-
-    println!("auto backup in progress");
-    let (backup_name, was_created) =
-        backup::create_backup(&cfg.active_vault, cfg.max_backups, false)?;
-
+    
+    println!("[...] Auto-backup in progress...");
+    let (backup_name, was_created) = backup::create_backup(&cfg.active_vault, cfg.max_backups, false)?;
+    
     if was_created {
-        println!("auto backup completed {backup_name}");
+        println!("[✔] Auto-backup completed: {}", backup_name);
     }
-
+    
     Ok(())
 }
 
 /// Handle backup subcommands
-#[allow(clippy::too_many_lines)]
 fn handle_backup_cmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     if args.is_empty() {
         println!("Backup Commands:");
@@ -285,10 +273,10 @@ fn handle_backup_cmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> 
                 std::process::exit(1);
             }
             let password = &args[1];
-
+            
             let _vault = storage::ld_vt(password)?;
             println!("[✔] Password verified");
-
+            
             let cfg = config::load_config().unwrap_or_default();
             backup::create_backup(&cfg.active_vault, cfg.max_backups, true)?;
             println!("[✔] Manual backup created successfully");
@@ -296,7 +284,7 @@ fn handle_backup_cmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> 
         "list" => {
             let cfg = config::load_config().unwrap_or_default();
             let backups = backup::ls_backs(&cfg.active_vault)?;
-
+            
             if backups.is_empty() {
                 println!("[!] No backups found for vault '{}'", cfg.active_vault);
                 println!();
@@ -308,7 +296,7 @@ fn handle_backup_cmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> 
                 println!();
                 println!("{:<40} {:<12} Created", "Filename", "Size");
                 println!("{}", "─".repeat(70));
-
+                
                 for (filename, size, created) in &backups {
                     let size_kb = if *size > 1024 {
                         format!("{} KB", *size / 1024)
@@ -317,52 +305,50 @@ fn handle_backup_cmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> 
                     };
                     println!("{filename:<40} {size_kb:<12} {created}");
                 }
-
+                
                 println!();
                 println!("Total backups: {}", backups.len());
                 println!();
                 println!("Restore a backup with:");
-                println!("  passlock backup restore <backup_name> <password>");
+                println!("  passlock backup restore <backup-name> <password>");
             }
         }
         "restore" => {
             if args.len() < 2 {
-                eprintln!("Usage: passlock backup restore <backup_name|latest> <password>");
+                eprintln!("Usage: passlock backup restore <backup-name|latest> <password>");
                 eprintln!();
                 eprintln!("Examples:");
-                eprintln!(
-                    "  passlock backup restore backup_2026-02-28_10-30-45.vault myPassword123"
-                );
+                eprintln!("  passlock backup restore backup_2026-02-28_10-30-45.vault myPassword123");
                 eprintln!("  passlock backup restore latest myPassword123");
                 std::process::exit(1);
             }
-
+            
             let cfg = config::load_config().unwrap_or_default();
-
+            
             if args[1] == "latest" {
                 if args.len() < 3 {
                     eprintln!("Usage: passlock backup restore latest <password>");
                     std::process::exit(1);
                 }
                 let password = &args[2];
-
+                
                 let backups = backup::ls_backs(&cfg.active_vault)?;
                 if backups.is_empty() {
                     return Err("No backups found for this vault".into());
                 }
-
+                
                 let latest_backup = &backups[0].0;
-                println!("[i] Restoring latest backup: {latest_backup}");
+                println!("[i] Restoring latest backup: {}", latest_backup);
                 backup::restore_backup(&cfg.active_vault, latest_backup, password)?;
                 println!("[✔] Vault restored to latest backup successfully");
             } else {
                 if args.len() < 3 {
-                    eprintln!("Usage: passlock backup restore <backup_name> <password>");
+                    eprintln!("Usage: passlock backup restore <backup-name> <password>");
                     std::process::exit(1);
                 }
                 let backup_name = &args[1];
                 let password = &args[2];
-
+                
                 backup::restore_backup(&cfg.active_vault, backup_name, password)?;
                 println!("[✔] Backup restored successfully");
             }
@@ -373,12 +359,11 @@ fn handle_backup_cmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> 
             println!("Available subcommands: create, list, restore");
         }
     }
-
+    
     Ok(())
 }
 
 /// Handle vault management subcommands
-#[allow(clippy::too_many_lines)]
 fn handle_vault_cmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     if args.is_empty() {
         println!("Vault Management Commands:");
@@ -413,28 +398,28 @@ fn handle_vault_cmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
             }
             let vault_name = &args[1];
             let password = &args[2];
-
+            
             if config::vault_exists(vault_name) {
-                return Err(format!("Vault '{vault_name}' already exists").into());
+                return Err(format!("Vault '{}' already exists", vault_name).into());
             }
-
+            
             let salt = crypto::gen_salt();
             let vault = Vault::new(salt);
-
+            
             storage::save_vault_to(vault_name, &vault, password)?;
-
-            println!("[✔] Vault '{vault_name}' created successfully");
+            
+            println!("[✔] Vault '{}' created successfully", vault_name);
             println!("[i] Backups will be created automatically as you add passwords");
-
+            
             let mut cfg = config::load_config()?;
-            cfg.active_vault.clone_from(vault_name);
+            cfg.active_vault = vault_name.to_string();
             config::save_config(&cfg)?;
-            println!("[✔] Vault '{vault_name}' set as active");
+            println!("[✔] Vault '{}' set as active", vault_name);
         }
         "list" => {
             let vaults = config::list_vaults()?;
             let cfg = config::load_config()?;
-
+            
             if vaults.is_empty() {
                 println!("[!] No vaults found");
                 println!();
@@ -445,12 +430,8 @@ fn handle_vault_cmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
                 println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                 println!();
                 for vault_name in vaults {
-                    let marker = if vault_name == cfg.active_vault {
-                        " (active)"
-                    } else {
-                        ""
-                    };
-                    println!("  • {vault_name}{marker}");
+                    let marker = if vault_name == cfg.active_vault { " (active)" } else { "" };
+                    println!("  • {}{}", vault_name, marker);
                 }
                 println!();
                 println!("Switch vault with: passlock vault use <name>");
@@ -465,45 +446,45 @@ fn handle_vault_cmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
                 std::process::exit(1);
             }
             let vault_name = &args[1];
-
+            
             if !config::vault_exists(vault_name) {
-                return Err(format!("Vault '{vault_name}' does not exist").into());
+                return Err(format!("Vault '{}' does not exist", vault_name).into());
             }
-
+            
             let mut cfg = config::load_config()?;
-            cfg.active_vault.clone_from(vault_name);
+            cfg.active_vault = vault_name.to_string();
             config::save_config(&cfg)?;
-
-            println!("[✔] Active vault set to: {vault_name}");
+            
+            println!("[✔] Active vault set to: {}", vault_name);
         }
         "info" => {
             let cfg = config::load_config()?;
             let vaults = config::list_vaults()?;
-
+            
             println!("Vault Information:");
             println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             println!();
             println!("Active vault: {}", cfg.active_vault);
             println!("Total vaults: {}", vaults.len());
             println!();
-
+            
             if config::vault_exists(&cfg.active_vault) {
                 let vault_path = config::get_vault_path(&cfg.active_vault);
                 if let Ok(metadata) = std::fs::metadata(&vault_path) {
                     let size_kb = metadata.len() / 1024;
                     if size_kb > 0 {
-                        println!("Vault size: {size_kb} KB");
+                        println!("Vault size: {} KB", size_kb);
                     } else {
                         println!("Vault size: {} bytes", metadata.len());
                     }
                 }
-
+                
                 let backups = backup::ls_backs(&cfg.active_vault).unwrap_or_else(|_| Vec::new());
                 println!("Backups: {} available", backups.len());
             } else {
                 println!("Active vault '{}' not found!", cfg.active_vault);
             }
-
+            
             println!();
             println!("Configuration:");
             println!("  Auto-backup: {}", cfg.auto_backup);
@@ -513,34 +494,66 @@ fn handle_vault_cmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         }
         "delete" => {
             if args.len() < 2 {
-                eprintln!("Usage: passlock vault delete <name>");
+                eprintln!("Usage: passlock vault delete <n>");
                 eprintln!();
                 eprintln!("Example:");
                 eprintln!("  passlock vault delete old-vault");
                 std::process::exit(1);
             }
             let vault_name = &args[1];
-
-            let cfg = config::load_config()?;
-            if vault_name == &cfg.active_vault {
-                return Err("Cannot delete active vault! Switch to another vault first.".into());
+            
+            if !config::vault_exists(vault_name) {
+                return Err(format!("Vault '{vault_name}' does not exist").into());
             }
-
-            println!("WARNING: This will delete vault '{vault_name}' and all its backups.");
+            
+            let mut cfg = config::load_config()?;
+            let is_active = vault_name == &cfg.active_vault;
+            
+            if is_active {
+                println!("WARNING: You are deleting the ACTIVE vault.");
+            }
+            
+            println!("This will delete vault '{vault_name}' and all its backups.");
             println!("Are you sure? (y/n)");
-
+            
+            use std::io::{self, BufRead};
+            let stdin = io::stdin();
             let mut line = String::new();
-            std::io::stdin().read_line(&mut line)?;
-
+            stdin.lock().read_line(&mut line)?;
+            
             if line.trim().to_lowercase() == "y" {
                 config::delete_vault(vault_name)?;
+                
+                if is_active {
+                    let remaining_vaults = config::list_vaults()?;
+                    
+                    if remaining_vaults.is_empty() {
+                        cfg.active_vault = String::new();
+                        config::save_config(&cfg)?;
+                        println!("[✔] Vault deleted successfully");
+                        println!("[i] No vaults remaining. Create a new vault with:");
+                        println!("    passlock vault create <n> <password>");
+                    } else {
+                        cfg.active_vault = String::new();
+                        config::save_config(&cfg)?;
+                        println!("[✔] Vault deleted successfully");
+                        println!("[i] No active vault selected. Available vaults:");
+                        for v in &remaining_vaults {
+                            println!("    • {v}");
+                        }
+                        println!();
+                        println!("Set active vault with: passlock vault use <n>");
+                    }
+                } else {
+                    println!("[✔] Vault '{vault_name}' deleted successfully");
+                }
             } else {
                 println!("[!] Deletion cancelled");
             }
         }
         "rename" => {
             if args.len() < 3 {
-                eprintln!("Usage: passlock vault rename <old_name> <new_name>");
+                eprintln!("Usage: passlock vault rename <old-name> <new-name>");
                 eprintln!();
                 eprintln!("Example:");
                 eprintln!("  passlock vault rename work company");
@@ -548,12 +561,12 @@ fn handle_vault_cmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
             }
             let old_name = &args[1];
             let new_name = &args[2];
-
+            
             config::rename_vault(old_name, new_name)?;
-
+            
             let mut cfg = config::load_config()?;
             if cfg.active_vault == *old_name {
-                cfg.active_vault.clone_from(new_name);
+                cfg.active_vault = new_name.to_string();
                 config::save_config(&cfg)?;
             }
         }
@@ -563,7 +576,7 @@ fn handle_vault_cmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
             println!("Available subcommands: create, list, use, info, delete, rename");
         }
     }
-
+    
     Ok(())
 }
 
@@ -605,14 +618,10 @@ fn handle_icmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
             }
-
+            
             let cfg = config::load_config().unwrap_or_default();
             let backups = backup::ls_backs(&cfg.active_vault).unwrap_or_else(|_| Vec::new());
-            println!(
-                "  Backups: {} available (vault: {})",
-                backups.len(),
-                cfg.active_vault
-            );
+            println!("  Backups: {} available (vault: {})", backups.len(), cfg.active_vault);
         } else {
             println!("Vault Status:");
             println!("  No vault found");
@@ -630,7 +639,10 @@ fn handle_icmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn print_usage() {
-    println!("PassLock v{}", env!("CARGO_PKG_VERSION"));
+    println!(
+        "PassLock v{} - Secure Password Manager",
+        env!("CARGO_PKG_VERSION")
+    );
     println!();
     println!("USAGE:");
     println!("  passlock <COMMAND> [OPTIONS]");
@@ -651,7 +663,7 @@ fn print_usage() {
     println!("BACKUP COMMANDS (Encrypted):");
     println!("  backup create <password>         Create manual backup");
     println!("  backup list                      List all backups");
-    println!("  backup restore <name|latest> <password> Restore from backup");
+    println!("  backup restore <name|latest> <p> Restore from backup");
     println!();
     println!("  export <password> <file>         Export vault (encrypted)");
     println!("  import <password> <file>         Import vault (encrypted)");
@@ -666,14 +678,27 @@ fn print_usage() {
     println!("  info [cpu]                       Show system information");
     println!("  version                          Show version");
     println!("  help                             Show this help");
-    println!("COMMANDS:");
-    println!("  create <password>   Create a new vault");
-    println!("  unlock <password>   Unlock and verify vault");
-    println!("  sync <password>     Sync vault changes");
-    println!("  tui                 Launch TUI interface");
-    println!("  info [cpu]          Show system information");
-    println!("  version             Show version");
-    println!("  help                Show this help");
     println!();
-    println!("For more info: https://github.com/hachimamma/Passlock/blob/main/README.md");
+    println!("EXAMPLES:");
+    println!();
+    println!("  # Create and manage vaults");
+    println!("  passlock vault create personal myPass123");
+    println!("  passlock vault create work workPass456");
+    println!("  passlock vault list");
+    println!("  passlock vault use work");
+    println!("  passlock tui                     # Opens active vault");
+    println!();
+    println!("  # Backup to any location (works everywhere!)");
+    println!("  passlock export myPass123 ~/Documents/backup.vault");
+    println!("  passlock export myPass123 /media/usb/backup.vault");
+    println!("  passlock export myPass123 ~/Dropbox/backup.vault");
+    println!();
+    println!("  # Migrate from LastPass/Bitwarden");
+    println!("  passlock import-csv myPass123 ~/lastpass-export.csv");
+    println!();
+    println!("  # Migrate to another password manager");
+    println!("  passlock export-csv myPass123 ~/passwords.csv");
+    println!("  # (Then import into other PM and DELETE the CSV!)");
+    println!();
+    println!("For more info: https://github.com/hachimamma/Passlock");
 }
