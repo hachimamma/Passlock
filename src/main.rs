@@ -631,7 +631,7 @@ fn handle_icmd(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
 
 fn print_usage() {
     println!(
-        "PassLock v{} - Secure Password Manager",
+        "PassLock v{}",
         env!("CARGO_PKG_VERSION")
     );
     println!();
