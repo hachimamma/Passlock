@@ -215,10 +215,7 @@ fn handle_import_cmd(
             }
 
             if preview.duplicates > 0 {
-                println!(
-                    "WARNING: {} duplicate entries found!",
-                    preview.duplicates
-                );
+                println!("WARNING: {} duplicate entries found!", preview.duplicates);
                 println!();
                 println!("Options for handling duplicates:");
                 println!("  --skip-duplicates      Skip duplicate entries (keep existing)");
