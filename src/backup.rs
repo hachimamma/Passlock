@@ -5,7 +5,7 @@ use std::fmt::Write;
 use std::fs;
 use std::path::PathBuf;
 
-type BackupInfo = Vec<(String, u64, String)>;
+pub type BackupInfo = Vec<(String, u64, String)>;
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 /// Get the backup directory path
@@ -93,7 +93,7 @@ pub fn ls_backs(vault_name: &str) -> Result<BackupInfo> {
         let entry = entry?;
         let path = entry.path();
 
-        if path.extension().and_then(|s| s.to_str()) == Some("vault") {
+        if path.extension().is_some_and(|s| s == "vault") {
             let metadata = fs::metadata(&path)?;
             let filename = path.file_name().unwrap().to_string_lossy().to_string();
             let size = metadata.len();
@@ -185,7 +185,8 @@ pub fn export_vault(vault_name: &str, password: &str, output_path: &str) -> Resu
 }
 
 /// Import vault from external location
-pub fn _import_vault(vault_name: &str, password: &str, input_path: &str) -> Result<()> {
+#[allow(dead_code)]
+pub fn import_vault(vault_name: &str, password: &str, input_path: &str) -> Result<()> {
     let import_path = PathBuf::from(input_path);
 
     if !import_path.exists() {
@@ -773,7 +774,7 @@ pub fn import_csv_smart(
                 continue;
             } else if merge_duplicates {
                 let entry = &mut vault.e[existing_idx];
-                entry.p = password_val.clone();
+                entry.p.clone_from(&password_val);
 
                 if let Some(url) = fields.get(3).filter(|s| !s.is_empty()) {
                     entry.url = Some(url.clone());
@@ -865,7 +866,7 @@ pub fn export_csv_filtered(
                     && !e
                         .url
                         .as_ref()
-                        .map_or(false, |u| u.to_lowercase().contains(&query))
+                        .is_some_and(|u| u.to_lowercase().contains(&query))
                 {
                     return false;
                 }
