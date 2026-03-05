@@ -185,7 +185,7 @@ pub fn export_vault(vault_name: &str, password: &str, output_path: &str) -> Resu
 }
 
 /// Import vault from external location
-pub fn import_vault(vault_name: &str, password: &str, input_path: &str) -> Result<()> {
+pub fn _import_vault(vault_name: &str, password: &str, input_path: &str) -> Result<()> {
     let import_path = PathBuf::from(input_path);
 
     if !import_path.exists() {
@@ -476,6 +476,7 @@ fn parse_csv_line(line: &str) -> Vec<String> {
     fields
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct ImportPreviewEntry {
     pub name: String,
@@ -500,7 +501,7 @@ pub struct ImportPreview {
 
 /// Preview CSV
 pub fn preview_csv_import(
-    vault_name: &str,
+    _vault_name: &str,
     password: &str,
     input_path: &str,
 ) -> Result<ImportPreview> {
@@ -621,7 +622,7 @@ pub fn preview_csv_import(
 
 /// Preview JSON
 pub fn preview_json_import(
-    vault_name: &str,
+    _vault_name: &str,
     password: &str,
     input_path: &str,
 ) -> Result<ImportPreview> {
@@ -839,7 +840,7 @@ pub fn import_csv_smart(
 
 /// Export CSV with filters
 pub fn export_csv_filtered(
-    vault_name: &str,
+    _vault_name: &str,
     password: &str,
     output_path: &str,
     filter_tag: Option<&str>,
