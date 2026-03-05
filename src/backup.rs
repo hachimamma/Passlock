@@ -8,39 +8,17 @@ use std::path::PathBuf;
 type BackupInfo = Vec<(String, u64, String)>;
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
-#[derive(Debug, Clone)]
-pub struct ImportPreviewEntry {
-    pub name: String,
-    pub username: String,
-    pub url: Option<String>,
-    pub has_password: bool,
-    pub has_totp: bool,
-    pub tags: Vec<String>,
-    pub is_duplicate: bool,
-    pub notes_preview: Option<String>,
-}
-
-#[derive(Debug)]
-pub struct ImportPreview {
-    pub total_entries: usize,
-    pub valid_entries: usize,
-    pub empty_entries: usize,
-    pub duplicates: usize,
-    pub entries: Vec<ImportPreviewEntry>,
-    pub errors: Vec<String>,
-}
-
-/// Gets the backup directory path
+/// Get the backup directory path
 pub fn gback_dir() -> PathBuf {
     crate::config::get_passlock_dir().join("backups")
 }
 
-/// Gets the vault specific backup directory
+/// Get the vault specific backup directory
 pub fn gvback_dir(vault_name: &str) -> PathBuf {
     gback_dir().join(vault_name)
 }
 
-/// Initialize backup directory structure
+/// Init backup directory structure
 pub fn init_bsys() -> Result<()> {
     let backup_dir = gback_dir();
 
@@ -261,7 +239,7 @@ pub fn export_csv(vault_name: &str, password: &str, output_path: &str) -> Result
 
         writeln!(
             csv_content,
-            "{name},{username},{password_val},{url},{totp},{tags},{notes}"
+            "{name},{username},{password_val},{url},{notes},{tags},{totp}"
         )?;
     }
 
@@ -498,18 +476,39 @@ fn parse_csv_line(line: &str) -> Vec<String> {
     fields
 }
 
+#[derive(Debug, Clone)]
+pub struct ImportPreviewEntry {
+    pub name: String,
+    pub username: String,
+    pub url: Option<String>,
+    pub has_password: bool,
+    pub has_totp: bool,
+    pub tags: Vec<String>,
+    pub is_duplicate: bool,
+    pub notes_preview: Option<String>,
+}
+
+#[derive(Debug)]
+pub struct ImportPreview {
+    pub total_entries: usize,
+    pub valid_entries: usize,
+    pub empty_entries: usize,
+    pub duplicates: usize,
+    pub entries: Vec<ImportPreviewEntry>,
+    pub errors: Vec<String>,
+}
+
 /// Preview CSV
 pub fn preview_csv_import(
     vault_name: &str,
     password: &str,
     input_path: &str,
-) -> Result<ImportPreview, Box<dyn std::error::Error>> {
+) -> Result<ImportPreview> {
     use std::io::{BufRead, BufReader};
-    use crate::storage;
 
     let vault = storage::ld_vt(password)?;
-    
-    let file = std::fs::File::open(input_path)?;
+
+    let file = fs::File::open(input_path)?;
     let reader = BufReader::new(file);
     let mut lines = reader.lines();
 
@@ -534,7 +533,9 @@ pub fn preview_csv_import(
         let line = match line_result {
             Ok(l) => l,
             Err(e) => {
-                preview.errors.push(format!("Line {}: Read error - {}", line_num + 2, e));
+                preview
+                    .errors
+                    .push(format!("Line {}: Read error - {}", line_num + 2, e));
                 continue;
             }
         };
@@ -548,7 +549,10 @@ pub fn preview_csv_import(
         let fields = parse_csv_line(&line);
 
         if fields.len() < 3 {
-            preview.errors.push(format!("Line {}: Insufficient fields (need at least name, username, password)", line_num + 2));
+            preview.errors.push(format!(
+                "Line {}: Insufficient fields (need at least name, username, password)",
+                line_num + 2
+            ));
             preview.empty_entries += 1;
             continue;
         }
@@ -558,29 +562,37 @@ pub fn preview_csv_import(
         let password_val = fields.get(2).cloned().unwrap_or_default();
 
         if name.is_empty() || password_val.is_empty() {
-            preview.errors.push(format!("Line {}: Empty name or password", line_num + 2));
+            preview
+                .errors
+                .push(format!("Line {}: Empty name or password", line_num + 2));
             preview.empty_entries += 1;
             continue;
         }
 
         let is_duplicate = vault.e.iter().any(|e| {
-            e.n.to_lowercase() == name.to_lowercase() 
-            && e.u.to_lowercase() == username.to_lowercase()
+            e.n.to_lowercase() == name.to_lowercase()
+                && e.u.to_lowercase() == username.to_lowercase()
         });
 
         if is_duplicate {
             preview.duplicates += 1;
         }
 
-        let url = fields.get(3).and_then(|s| if s.is_empty() { None } else { Some(s.clone()) });
-        let notes = fields.get(4).and_then(|s| if s.is_empty() { None } else { Some(s.clone()) });
+        let url = fields
+            .get(3)
+            .and_then(|s| if s.is_empty() { None } else { Some(s.clone()) });
+        let notes = fields
+            .get(4)
+            .and_then(|s| if s.is_empty() { None } else { Some(s.clone()) });
         let tags: Vec<String> = fields.get(5).map_or(Vec::new(), |s| {
             s.split(';')
                 .filter(|t| !t.is_empty())
                 .map(String::from)
                 .collect()
         });
-        let totp_secret = fields.get(6).and_then(|s| if s.is_empty() { None } else { Some(s.clone()) });
+        let totp_secret = fields
+            .get(6)
+            .and_then(|s| if s.is_empty() { None } else { Some(s.clone()) });
 
         let notes_preview = notes.as_ref().map(|n| {
             if n.len() > 50 {
@@ -612,12 +624,10 @@ pub fn preview_json_import(
     vault_name: &str,
     password: &str,
     input_path: &str,
-) -> Result<ImportPreview, Box<dyn std::error::Error>> {
-    use crate::storage;
-    
+) -> Result<ImportPreview> {
     let vault = storage::ld_vt(password)?;
-    
-    let json_content = std::fs::read_to_string(input_path)?;
+
+    let json_content = fs::read_to_string(input_path)?;
     let json: serde_json::Value = serde_json::from_str(&json_content)?;
 
     let Some(serde_json::Value::Array(entries)) = json.get("entries") else {
@@ -642,23 +652,34 @@ pub fn preview_json_import(
         let password_val = entry_json["password"].as_str().unwrap_or("").to_string();
 
         if name.is_empty() || password_val.is_empty() {
-            preview.errors.push(format!("Entry {}: Empty name or password", idx + 1));
+            preview
+                .errors
+                .push(format!("Entry {}: Empty name or password", idx + 1));
             preview.empty_entries += 1;
             continue;
         }
 
         let is_duplicate = vault.e.iter().any(|e| {
-            e.n.to_lowercase() == name.to_lowercase() 
-            && e.u.to_lowercase() == username.to_lowercase()
+            e.n.to_lowercase() == name.to_lowercase()
+                && e.u.to_lowercase() == username.to_lowercase()
         });
 
         if is_duplicate {
             preview.duplicates += 1;
         }
 
-        let url = entry_json.get("url").and_then(|v| v.as_str()).map(String::from);
-        let notes = entry_json.get("notes").and_then(|v| v.as_str()).map(String::from);
-        let totp_secret = entry_json.get("totp_secret").and_then(|v| v.as_str()).map(String::from);
+        let url = entry_json
+            .get("url")
+            .and_then(|v| v.as_str())
+            .map(String::from);
+        let notes = entry_json
+            .get("notes")
+            .and_then(|v| v.as_str())
+            .map(String::from);
+        let totp_secret = entry_json
+            .get("totp_secret")
+            .and_then(|v| v.as_str())
+            .map(String::from);
         let tags: Vec<String> = match entry_json.get("tags") {
             Some(serde_json::Value::Array(arr)) => arr
                 .iter()
@@ -693,20 +714,19 @@ pub fn preview_json_import(
     Ok(preview)
 }
 
-/// Import CSV with duplicate handling options
+/// Import CSV with duplicate handling
 pub fn import_csv_smart(
     vault_name: &str,
     password: &str,
     input_path: &str,
     skip_duplicates: bool,
     merge_duplicates: bool,
-) -> Result<(usize, usize), Box<dyn std::error::Error>> {
+) -> Result<(usize, usize)> {
     use std::io::{BufRead, BufReader};
-    use crate::storage;
 
     let mut vault = storage::ld_vt(password)?;
 
-    let file = std::fs::File::open(input_path)?;
+    let file = fs::File::open(input_path)?;
     let reader = BufReader::new(file);
     let mut lines = reader.lines();
 
@@ -744,8 +764,8 @@ pub fn import_csv_smart(
         }
 
         if let Some(existing_idx) = vault.e.iter().position(|e| {
-            e.n.to_lowercase() == name.to_lowercase() 
-            && e.u.to_lowercase() == username.to_lowercase()
+            e.n.to_lowercase() == name.to_lowercase()
+                && e.u.to_lowercase() == username.to_lowercase()
         }) {
             if skip_duplicates {
                 skipped_count += 1;
@@ -753,7 +773,7 @@ pub fn import_csv_smart(
             } else if merge_duplicates {
                 let entry = &mut vault.e[existing_idx];
                 entry.p = password_val.clone();
-                
+
                 if let Some(url) = fields.get(3).filter(|s| !s.is_empty()) {
                     entry.url = Some(url.clone());
                 }
@@ -771,7 +791,7 @@ pub fn import_csv_smart(
                 if let Some(totp) = fields.get(6).filter(|s| !s.is_empty()) {
                     entry.totp_secret = Some(totp.clone());
                 }
-                
+
                 entry.last_modified = crate::get_timestamp();
                 imported_count += 1;
                 continue;
@@ -811,7 +831,7 @@ pub fn import_csv_smart(
 
     let config = crate::config::load_config()?;
     if config.auto_backup {
-        crate::backup::create_backup(vault_name, config.max_backups, false)?;
+        create_backup(vault_name, config.max_backups, false)?;
     }
 
     Ok((imported_count, skipped_count))
@@ -824,9 +844,7 @@ pub fn export_csv_filtered(
     output_path: &str,
     filter_tag: Option<&str>,
     filter_search: Option<&str>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    use crate::storage;
-    
+) -> Result<()> {
     let vault = storage::ld_vt(password)?;
 
     let filtered_entries: Vec<&Entry> = vault
@@ -838,17 +856,20 @@ pub fn export_csv_filtered(
                     return false;
                 }
             }
-            
+
             if let Some(search) = filter_search {
                 let query = search.to_lowercase();
                 if !e.n.to_lowercase().contains(&query)
                     && !e.u.to_lowercase().contains(&query)
-                    && !e.url.as_ref().map_or(false, |u| u.to_lowercase().contains(&query))
+                    && !e
+                        .url
+                        .as_ref()
+                        .map_or(false, |u| u.to_lowercase().contains(&query))
                 {
                     return false;
                 }
             }
-            
+
             true
         })
         .collect();
@@ -873,13 +894,17 @@ pub fn export_csv_filtered(
 
         writeln!(
             csv_content,
-            "{name},{username},{password_val},{url},{totp},{tags},{notes}"
+            "{name},{username},{password_val},{url},{notes},{tags},{totp}"
         )?;
     }
 
-    std::fs::write(output_path, csv_content)?;
+    fs::write(output_path, csv_content)?;
 
-    println!("[✔] Exported {} entries to CSV: {}", filtered_entries.len(), output_path);
+    println!(
+        "[✔] Exported {} entries to CSV: {}",
+        filtered_entries.len(),
+        output_path
+    );
     println!("[!] WARNING: This is Plaintext, delete after use.");
 
     Ok(())

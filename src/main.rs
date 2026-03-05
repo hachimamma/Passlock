@@ -81,12 +81,8 @@ fn process_command(args: &[String], active_vault: &str) -> Result<(), Box<dyn st
         }
         "backup" => handle_backup_cmd(&args[2..]),
         "vault" => handle_vault_cmd(&args[2..]),
-        "export" => handle_export_cmd(args, active_vault),
-        "import" => handle_import_cmd(args, active_vault),
-        "export-csv" => handle_export_csv_cmd(args, active_vault),
-        "export-json" => handle_export_json_cmd(args, active_vault),
-        "import-csv" => handle_import_csv_cmd(args, active_vault),
-        "import-json" => handle_import_json_cmd(args, active_vault),
+        "import" => handle_import_cmd(&args[2..], active_vault),
+        "export" => handle_export_cmd(&args[2..], active_vault),
         "info" => {
             handle_icmd(&args[2..]);
             Ok(())
@@ -109,126 +105,317 @@ fn process_command(args: &[String], active_vault: &str) -> Result<(), Box<dyn st
     }
 }
 
-/// Handle export command
-fn handle_export_cmd(
-    args: &[String],
-    active_vault: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    if args.len() < 4 {
-        eprintln!("Usage: passlock export <password> <output-file>");
-        eprintln!();
-        eprintln!("Export encrypted vault for backup/transfer.");
-        eprintln!("Works with ANY path on ANY device!");
-        eprintln!();
-        eprintln!("Examples:");
-        eprintln!("  passlock export myPass123 ~/Documents/backup.vault");
-        eprintln!("  passlock export myPass123 /media/usb/backup.vault");
-        eprintln!("  passlock export myPass123 ~/Dropbox/backup.vault");
-        std::process::exit(1);
-    }
-    let password = &args[2];
-    let output_file = &args[3];
-    backup::export_vault(active_vault, password, output_file)
-}
-
-/// Handle import command
+/// Handle import command with preview and smart duplicate
 fn handle_import_cmd(
     args: &[String],
     active_vault: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if args.len() < 4 {
-        eprintln!("Usage: passlock import <password> <input-file>");
-        eprintln!();
-        eprintln!("Import encrypted vault from backup.");
-        eprintln!("Works with ANY path on ANY device!");
-        eprintln!();
-        eprintln!("Examples:");
-        eprintln!("  passlock import myPass123 ~/Documents/backup.vault");
-        eprintln!("  passlock import myPass123 /media/usb/backup.vault");
-        std::process::exit(1);
+    if args.is_empty() {
+        println!("Import Commands:");
+        println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        println!();
+        println!("Usage: passlock import <subcommand> [OPTIONS]");
+        println!();
+        println!("Subcommands:");
+        println!("  preview <file>                 Preview what will be imported");
+        println!("  csv <password> <file>          Import from CSV");
+        println!("  json <password> <file>         Import from JSON");
+        println!();
+        println!("Options:");
+        println!("  --skip-duplicates              Skip entries that already exist");
+        println!("  --merge-duplicates             Update existing entries with new data");
+        println!();
+        println!("Examples:");
+        println!("  passlock import preview passwords.csv");
+        println!("  passlock import csv myPass123 passwords.csv");
+        println!("  passlock import csv myPass123 passwords.csv --skip-duplicates");
+        println!("  passlock import csv myPass123 passwords.csv --merge-duplicates");
+        return Ok(());
     }
-    let password = &args[2];
-    let input_file = &args[3];
-    backup::import_vault(active_vault, password, input_file)
+
+    match args[0].as_str() {
+        "preview" => {
+            if args.len() < 2 {
+                eprintln!("Usage: passlock import preview <file>");
+                eprintln!();
+                eprintln!("Preview a CSV or JSON file before importing");
+                eprintln!();
+                eprintln!("Example:");
+                eprintln!("  passlock import preview lastpass-export.csv");
+                std::process::exit(1);
+            }
+
+            let file_path = &args[1];
+
+            let is_csv = file_path.ends_with(".csv");
+            let is_json = file_path.ends_with(".json");
+
+            if !is_csv && !is_json {
+                return Err("File must be .csv or .json".into());
+            }
+
+            println!("[...] Analyzing file: {}", file_path);
+            println!();
+
+            println!("Enter vault password to check for duplicates:");
+            use std::io::Write;
+            std::io::stdout().flush()?;
+            let password = rpassword::read_password()?;
+
+            let preview = if is_csv {
+                backup::preview_csv_import(active_vault, &password, file_path)?
+            } else {
+                backup::preview_json_import(active_vault, &password, file_path)?
+            };
+
+            println!("Import Preview:");
+            println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            println!();
+            println!("Total entries in file:  {}", preview.total_entries);
+            println!("Valid entries:          {}", preview.valid_entries);
+            println!("Empty/invalid entries:  {}", preview.empty_entries);
+            println!("Duplicates found:       {}", preview.duplicates);
+            println!();
+
+            if !preview.errors.is_empty() {
+                println!("Errors:");
+                for error in &preview.errors {
+                    println!("  {}", error);
+                }
+                println!();
+            }
+
+            if preview.valid_entries > 0 {
+                println!("Sample entries (first 5):");
+                println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+                for (idx, entry) in preview.entries.iter().take(5).enumerate() {
+                    let dup_marker = if entry.is_duplicate {
+                        " [DUPLICATE]"
+                    } else {
+                        ""
+                    };
+                    let totp_marker = if entry.has_totp { " [2FA]" } else { "" };
+
+                    println!("{}. {}{}{}", idx + 1, entry.name, dup_marker, totp_marker);
+                    println!("   Username: {}", entry.username);
+                    if let Some(ref url) = entry.url {
+                        println!("   URL: {}", url);
+                    }
+                    if !entry.tags.is_empty() {
+                        println!("   Tags: {}", entry.tags.join(", "));
+                    }
+                    println!();
+                }
+
+                if preview.entries.len() > 5 {
+                    println!("... and {} more entries", preview.entries.len() - 5);
+                    println!();
+                }
+            }
+
+            if preview.duplicates > 0 {
+                println!(
+                    "WARNING: {} duplicate entries found!",
+                    preview.duplicates
+                );
+                println!();
+                println!("Options for handling duplicates:");
+                println!("  --skip-duplicates      Skip duplicate entries (keep existing)");
+                println!("  --merge-duplicates     Update existing entries with new data");
+                println!();
+                println!("Example:");
+                println!(
+                    "  passlock import csv <password> {} --skip-duplicates",
+                    file_path
+                );
+            }
+
+            println!("To import this file:");
+            if is_csv {
+                println!("  passlock import csv <password> {}", file_path);
+            } else {
+                println!("  passlock import json <password> {}", file_path);
+            }
+        }
+        "csv" => {
+            if args.len() < 3 {
+                eprintln!("Usage: passlock import csv <password> <file> [OPTIONS]");
+                eprintln!();
+                eprintln!("Options:");
+                eprintln!("  --skip-duplicates      Skip entries that already exist");
+                eprintln!("  --merge-duplicates     Update existing entries");
+                eprintln!();
+                eprintln!("Example:");
+                eprintln!("  passlock import csv myPass123 passwords.csv --skip-duplicates");
+                std::process::exit(1);
+            }
+
+            let password = &args[1];
+            let file_path = &args[2];
+
+            let skip_duplicates = args.iter().any(|a| a == "--skip-duplicates");
+            let merge_duplicates = args.iter().any(|a| a == "--merge-duplicates");
+
+            if skip_duplicates && merge_duplicates {
+                return Err("Cannot use both --skip-duplicates and --merge-duplicates".into());
+            }
+
+            if skip_duplicates || merge_duplicates {
+                let (imported, skipped) = backup::import_csv_smart(
+                    active_vault,
+                    password,
+                    file_path,
+                    skip_duplicates,
+                    merge_duplicates,
+                )?;
+
+                println!("[✔] Import completed to vault '{}'", active_vault);
+                println!("[✔] Imported/Updated: {} entries", imported);
+                if skipped > 0 {
+                    println!("[!] Skipped: {} entries", skipped);
+                }
+            } else {
+                backup::import_csv(active_vault, password, file_path)?;
+            }
+        }
+        "json" => {
+            if args.len() < 3 {
+                eprintln!("Usage: passlock import json <password> <file>");
+                std::process::exit(1);
+            }
+
+            let password = &args[1];
+            let file_path = &args[2];
+
+            backup::import_json(active_vault, password, file_path)?;
+        }
+        _ => {
+            println!("Unknown import subcommand: {}", args[0]);
+            println!();
+            println!("Available subcommands: preview, csv, json");
+        }
+    }
+
+    Ok(())
 }
 
-/// Handle export CSV command
-fn handle_export_csv_cmd(
+/// Handle export command with filters
+fn handle_export_cmd(
     args: &[String],
     active_vault: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if args.len() < 4 {
-        eprintln!("Usage: passlock export-csv <password> <output-file.csv>");
-        eprintln!();
-        eprintln!("WARNING: Creates UNENCRYPTED CSV with plaintext passwords!");
-        eprintln!("Use for importing to other password managers (LastPass, Bitwarden, etc.)");
-        eprintln!();
-        eprintln!("Example:");
-        eprintln!("  passlock export-csv myPass123 ~/passwords.csv");
-        std::process::exit(1);
+    if args.is_empty() {
+        println!("Export Commands:");
+        println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        println!();
+        println!("Usage: passlock export <subcommand> [OPTIONS]");
+        println!();
+        println!("Subcommands:");
+        println!("  vault <password> <file>        Export encrypted vault");
+        println!("  csv <password> <file>          Export to CSV (PLAINTEXT)");
+        println!("  json <password> <file>         Export to JSON (PLAINTEXT)");
+        println!();
+        println!("Options for CSV/JSON export:");
+        println!("  --tag <tag>                    Export only entries with this tag");
+        println!("  --search <query>               Export only entries matching search");
+        println!();
+        println!("Examples:");
+        println!("  passlock export vault myPass123 backup.vault");
+        println!("  passlock export csv myPass123 all-passwords.csv");
+        println!("  passlock export csv myPass123 work.csv --tag work");
+        println!("  passlock export csv myPass123 google.csv --search google");
+        return Ok(());
     }
-    let password = &args[2];
-    let output_file = &args[3];
-    backup::export_csv(active_vault, password, output_file)
-}
 
-/// Handle export JSON command
-fn handle_export_json_cmd(
-    args: &[String],
-    active_vault: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    if args.len() < 4 {
-        eprintln!("Usage: passlock export-json <password> <output-file.json>");
-        eprintln!();
-        eprintln!("WARNING: Creates UNENCRYPTED JSON with plaintext passwords!");
-        eprintln!("Use for importing to other password managers.");
-        eprintln!();
-        eprintln!("Example:");
-        eprintln!("  passlock export-json myPass123 ~/passwords.json");
-        std::process::exit(1);
-    }
-    let password = &args[2];
-    let output_file = &args[3];
-    backup::export_json(active_vault, password, output_file)
-}
+    match args[0].as_str() {
+        "vault" => {
+            if args.len() < 3 {
+                eprintln!("Usage: passlock export vault <password> <file>");
+                std::process::exit(1);
+            }
 
-/// Handle import CSV command
-fn handle_import_csv_cmd(
-    args: &[String],
-    active_vault: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    if args.len() < 4 {
-        eprintln!("Usage: passlock import-csv <password> <input-file.csv>");
-        eprintln!();
-        eprintln!("Import passwords from CSV file (LastPass, Bitwarden, etc.)");
-        eprintln!("Expected format: name,username,password,url,notes,tags,2fa_secret");
-        eprintln!();
-        eprintln!("Example:");
-        eprintln!("  passlock import-csv myPass123 ~/lastpass-export.csv");
-        std::process::exit(1);
-    }
-    let password = &args[2];
-    let input_file = &args[3];
-    backup::import_csv(active_vault, password, input_file)
-}
+            let password = &args[1];
+            let file_path = &args[2];
 
-/// Handle import JSON command
-fn handle_import_json_cmd(
-    args: &[String],
-    active_vault: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    if args.len() < 4 {
-        eprintln!("Usage: passlock import-json <password> <input-file.json>");
-        eprintln!();
-        eprintln!("Import passwords from JSON file.");
-        eprintln!();
-        eprintln!("Example:");
-        eprintln!("  passlock import-json myPass123 ~/passwords.json");
-        std::process::exit(1);
+            backup::export_vault(active_vault, password, file_path)?;
+        }
+        "csv" => {
+            if args.len() < 3 {
+                eprintln!("Usage: passlock export csv <password> <file> [OPTIONS]");
+                eprintln!();
+                eprintln!("Options:");
+                eprintln!("  --tag <tag>        Export only entries with this tag");
+                eprintln!("  --search <query>   Export only entries matching search");
+                eprintln!();
+                eprintln!("Examples:");
+                eprintln!("  passlock export csv myPass123 passwords.csv");
+                eprintln!("  passlock export csv myPass123 work.csv --tag work");
+                std::process::exit(1);
+            }
+
+            let password = &args[1];
+            let file_path = &args[2];
+
+            let mut filter_tag = None;
+            let mut filter_search = None;
+
+            let mut i = 3;
+            while i < args.len() {
+                match args[i].as_str() {
+                    "--tag" => {
+                        if i + 1 < args.len() {
+                            filter_tag = Some(args[i + 1].as_str());
+                            i += 2;
+                        } else {
+                            return Err("--tag requires a value".into());
+                        }
+                    }
+                    "--search" => {
+                        if i + 1 < args.len() {
+                            filter_search = Some(args[i + 1].as_str());
+                            i += 2;
+                        } else {
+                            return Err("--search requires a value".into());
+                        }
+                    }
+                    _ => {
+                        i += 1;
+                    }
+                }
+            }
+
+            if filter_tag.is_some() || filter_search.is_some() {
+                backup::export_csv_filtered(
+                    active_vault,
+                    password,
+                    file_path,
+                    filter_tag,
+                    filter_search,
+                )?;
+            } else {
+                backup::export_csv(active_vault, password, file_path)?;
+            }
+        }
+        "json" => {
+            if args.len() < 3 {
+                eprintln!("Usage: passlock export json <password> <file>");
+                std::process::exit(1);
+            }
+
+            let password = &args[1];
+            let file_path = &args[2];
+
+            backup::export_json(active_vault, password, file_path)?;
+        }
+        _ => {
+            println!("Unknown export subcommand: {}", args[0]);
+            println!();
+            println!("Available subcommands: vault, csv, json");
+        }
     }
-    let password = &args[2];
-    let input_file = &args[3];
-    backup::import_json(active_vault, password, input_file)
+
+    Ok(())
 }
 
 /// Unlock vault command
@@ -262,7 +449,7 @@ fn sync_vault(password: &str) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/// Automatically backup vault after TUI closes
+/// Backup vault after TUI closes
 /// Called by TUI when exiting
 /// Only creates backup if vault was modified
 ///
@@ -784,14 +971,19 @@ fn print_usage() {
     println!("  backup list                      List all backups");
     println!("  backup restore <name|latest> <p> Restore from backup");
     println!();
-    println!("  export <password> <file>         Export vault (encrypted)");
-    println!("  import <password> <file>         Import vault (encrypted)");
+    println!("IMPORT/EXPORT:");
+    println!("  import preview <file>            Preview before importing");
+    println!("  import csv <pass> <file>         Import from CSV");
+    println!("  import json <pass> <file>        Import from JSON");
+    println!("  export vault <pass> <file>       Export encrypted vault");
+    println!("  export csv <pass> <file>         Export to CSV (plaintext)");
+    println!("  export json <pass> <file>        Export to JSON (plaintext)");
     println!();
-    println!("PASSWORD MANAGER MIGRATION (Plaintext - USE WITH CAUTION):");
-    println!("  export-csv <password> <file>     Export to CSV (for other PMs)");
-    println!("  export-json <password> <file>    Export to JSON (for other PMs)");
-    println!("  import-csv <password> <file>     Import from CSV");
-    println!("  import-json <password> <file>    Import from JSON");
+    println!("Import/Export Options:");
+    println!("  --skip-duplicates                Skip existing entries (import)");
+    println!("  --merge-duplicates               Update existing entries (import)");
+    println!("  --tag <tag>                      Filter by tag (export)");
+    println!("  --search <query>                 Filter by search (export)");
     println!();
     println!("INFO COMMANDS:");
     println!("  info [cpu]                       Show system information");

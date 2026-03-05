@@ -23,6 +23,7 @@ arboard = "3.3"
 totp-lite = "2.0"
 base32 = "0.4"
 chrono = "0.4"
+rpassword = "7.3"
 
 [build-dependencies]
 cc = "1.0"
