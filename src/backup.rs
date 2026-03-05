@@ -8,6 +8,28 @@ use std::path::PathBuf;
 type BackupInfo = Vec<(String, u64, String)>;
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
+#[derive(Debug, Clone)]
+pub struct ImportPreviewEntry {
+    pub name: String,
+    pub username: String,
+    pub url: Option<String>,
+    pub has_password: bool,
+    pub has_totp: bool,
+    pub tags: Vec<String>,
+    pub is_duplicate: bool,
+    pub notes_preview: Option<String>,
+}
+
+#[derive(Debug)]
+pub struct ImportPreview {
+    pub total_entries: usize,
+    pub valid_entries: usize,
+    pub empty_entries: usize,
+    pub duplicates: usize,
+    pub entries: Vec<ImportPreviewEntry>,
+    pub errors: Vec<String>,
+}
+
 /// Gets the backup directory path
 pub fn gback_dir() -> PathBuf {
     crate::config::get_passlock_dir().join("backups")
@@ -474,4 +496,391 @@ fn parse_csv_line(line: &str) -> Vec<String> {
 
     fields.push(current_field.trim().to_string());
     fields
+}
+
+/// Preview CSV
+pub fn preview_csv_import(
+    vault_name: &str,
+    password: &str,
+    input_path: &str,
+) -> Result<ImportPreview, Box<dyn std::error::Error>> {
+    use std::io::{BufRead, BufReader};
+    use crate::storage;
+
+    let vault = storage::ld_vt(password)?;
+    
+    let file = std::fs::File::open(input_path)?;
+    let reader = BufReader::new(file);
+    let mut lines = reader.lines();
+
+    if let Some(Ok(header)) = lines.next() {
+        if !header.contains("name") || !header.contains("password") {
+            return Err("Invalid CSV format: missing required columns (name, password)".into());
+        }
+    } else {
+        return Err("Empty CSV file".into());
+    }
+
+    let mut preview = ImportPreview {
+        total_entries: 0,
+        valid_entries: 0,
+        empty_entries: 0,
+        duplicates: 0,
+        entries: Vec::new(),
+        errors: Vec::new(),
+    };
+
+    for (line_num, line_result) in lines.enumerate() {
+        let line = match line_result {
+            Ok(l) => l,
+            Err(e) => {
+                preview.errors.push(format!("Line {}: Read error - {}", line_num + 2, e));
+                continue;
+            }
+        };
+
+        if line.trim().is_empty() {
+            continue;
+        }
+
+        preview.total_entries += 1;
+
+        let fields = parse_csv_line(&line);
+
+        if fields.len() < 3 {
+            preview.errors.push(format!("Line {}: Insufficient fields (need at least name, username, password)", line_num + 2));
+            preview.empty_entries += 1;
+            continue;
+        }
+
+        let name = fields[0].clone();
+        let username = fields.get(1).cloned().unwrap_or_default();
+        let password_val = fields.get(2).cloned().unwrap_or_default();
+
+        if name.is_empty() || password_val.is_empty() {
+            preview.errors.push(format!("Line {}: Empty name or password", line_num + 2));
+            preview.empty_entries += 1;
+            continue;
+        }
+
+        let is_duplicate = vault.e.iter().any(|e| {
+            e.n.to_lowercase() == name.to_lowercase() 
+            && e.u.to_lowercase() == username.to_lowercase()
+        });
+
+        if is_duplicate {
+            preview.duplicates += 1;
+        }
+
+        let url = fields.get(3).and_then(|s| if s.is_empty() { None } else { Some(s.clone()) });
+        let notes = fields.get(4).and_then(|s| if s.is_empty() { None } else { Some(s.clone()) });
+        let tags: Vec<String> = fields.get(5).map_or(Vec::new(), |s| {
+            s.split(';')
+                .filter(|t| !t.is_empty())
+                .map(String::from)
+                .collect()
+        });
+        let totp_secret = fields.get(6).and_then(|s| if s.is_empty() { None } else { Some(s.clone()) });
+
+        let notes_preview = notes.as_ref().map(|n| {
+            if n.len() > 50 {
+                format!("{}...", &n[..50])
+            } else {
+                n.clone()
+            }
+        });
+
+        preview.entries.push(ImportPreviewEntry {
+            name,
+            username,
+            url,
+            has_password: !password_val.is_empty(),
+            has_totp: totp_secret.is_some(),
+            tags,
+            is_duplicate,
+            notes_preview,
+        });
+
+        preview.valid_entries += 1;
+    }
+
+    Ok(preview)
+}
+
+/// Preview JSON
+pub fn preview_json_import(
+    vault_name: &str,
+    password: &str,
+    input_path: &str,
+) -> Result<ImportPreview, Box<dyn std::error::Error>> {
+    use crate::storage;
+    
+    let vault = storage::ld_vt(password)?;
+    
+    let json_content = std::fs::read_to_string(input_path)?;
+    let json: serde_json::Value = serde_json::from_str(&json_content)?;
+
+    let Some(serde_json::Value::Array(entries)) = json.get("entries") else {
+        return Err("Invalid JSON format: missing 'entries' array".into());
+    };
+
+    let mut preview = ImportPreview {
+        total_entries: entries.len(),
+        valid_entries: 0,
+        empty_entries: 0,
+        duplicates: 0,
+        entries: Vec::new(),
+        errors: Vec::new(),
+    };
+
+    for (idx, entry_json) in entries.iter().enumerate() {
+        let name = entry_json["name"]
+            .as_str()
+            .unwrap_or("Untitled")
+            .to_string();
+        let username = entry_json["username"].as_str().unwrap_or("").to_string();
+        let password_val = entry_json["password"].as_str().unwrap_or("").to_string();
+
+        if name.is_empty() || password_val.is_empty() {
+            preview.errors.push(format!("Entry {}: Empty name or password", idx + 1));
+            preview.empty_entries += 1;
+            continue;
+        }
+
+        let is_duplicate = vault.e.iter().any(|e| {
+            e.n.to_lowercase() == name.to_lowercase() 
+            && e.u.to_lowercase() == username.to_lowercase()
+        });
+
+        if is_duplicate {
+            preview.duplicates += 1;
+        }
+
+        let url = entry_json.get("url").and_then(|v| v.as_str()).map(String::from);
+        let notes = entry_json.get("notes").and_then(|v| v.as_str()).map(String::from);
+        let totp_secret = entry_json.get("totp_secret").and_then(|v| v.as_str()).map(String::from);
+        let tags: Vec<String> = match entry_json.get("tags") {
+            Some(serde_json::Value::Array(arr)) => arr
+                .iter()
+                .filter_map(|v| v.as_str())
+                .map(String::from)
+                .collect(),
+            _ => Vec::new(),
+        };
+
+        let notes_preview = notes.as_ref().map(|n| {
+            if n.len() > 50 {
+                format!("{}...", &n[..50])
+            } else {
+                n.clone()
+            }
+        });
+
+        preview.entries.push(ImportPreviewEntry {
+            name,
+            username,
+            url,
+            has_password: !password_val.is_empty(),
+            has_totp: totp_secret.is_some(),
+            tags,
+            is_duplicate,
+            notes_preview,
+        });
+
+        preview.valid_entries += 1;
+    }
+
+    Ok(preview)
+}
+
+/// Import CSV with duplicate handling options
+pub fn import_csv_smart(
+    vault_name: &str,
+    password: &str,
+    input_path: &str,
+    skip_duplicates: bool,
+    merge_duplicates: bool,
+) -> Result<(usize, usize), Box<dyn std::error::Error>> {
+    use std::io::{BufRead, BufReader};
+    use crate::storage;
+
+    let mut vault = storage::ld_vt(password)?;
+
+    let file = std::fs::File::open(input_path)?;
+    let reader = BufReader::new(file);
+    let mut lines = reader.lines();
+
+    if let Some(Ok(header)) = lines.next() {
+        if !header.contains("name") || !header.contains("password") {
+            return Err("Invalid CSV format".into());
+        }
+    } else {
+        return Err("Empty CSV file".into());
+    }
+
+    let mut imported_count = 0;
+    let mut skipped_count = 0;
+
+    for line_result in lines {
+        let line = line_result?;
+        if line.trim().is_empty() {
+            continue;
+        }
+
+        let fields = parse_csv_line(&line);
+
+        if fields.len() < 3 {
+            skipped_count += 1;
+            continue;
+        }
+
+        let name = fields[0].clone();
+        let username = fields.get(1).cloned().unwrap_or_default();
+        let password_val = fields.get(2).cloned().unwrap_or_default();
+
+        if name.is_empty() || password_val.is_empty() {
+            skipped_count += 1;
+            continue;
+        }
+
+        if let Some(existing_idx) = vault.e.iter().position(|e| {
+            e.n.to_lowercase() == name.to_lowercase() 
+            && e.u.to_lowercase() == username.to_lowercase()
+        }) {
+            if skip_duplicates {
+                skipped_count += 1;
+                continue;
+            } else if merge_duplicates {
+                let entry = &mut vault.e[existing_idx];
+                entry.p = password_val.clone();
+                
+                if let Some(url) = fields.get(3).filter(|s| !s.is_empty()) {
+                    entry.url = Some(url.clone());
+                }
+                if let Some(notes) = fields.get(4).filter(|s| !s.is_empty()) {
+                    entry.nt = Some(notes.clone());
+                }
+                if let Some(tags_str) = fields.get(5).filter(|s| !s.is_empty()) {
+                    let new_tags: Vec<String> = tags_str
+                        .split(';')
+                        .filter(|t| !t.is_empty())
+                        .map(String::from)
+                        .collect();
+                    entry.tags = new_tags;
+                }
+                if let Some(totp) = fields.get(6).filter(|s| !s.is_empty()) {
+                    entry.totp_secret = Some(totp.clone());
+                }
+                
+                entry.last_modified = crate::get_timestamp();
+                imported_count += 1;
+                continue;
+            }
+        }
+
+        let entry = Entry {
+            id: crate::generate_uuid(),
+            n: name,
+            u: username,
+            p: password_val,
+            url: fields
+                .get(3)
+                .and_then(|s| if s.is_empty() { None } else { Some(s.clone()) }),
+            nt: fields
+                .get(4)
+                .and_then(|s| if s.is_empty() { None } else { Some(s.clone()) }),
+            tags: fields.get(5).map_or(Vec::new(), |s| {
+                s.split(';')
+                    .filter(|t| !t.is_empty())
+                    .map(String::from)
+                    .collect()
+            }),
+            totp_secret: fields
+                .get(6)
+                .and_then(|s| if s.is_empty() { None } else { Some(s.clone()) }),
+            t: crate::get_timestamp(),
+            last_modified: crate::get_timestamp(),
+            history: Vec::new(),
+        };
+
+        vault.e.push(entry);
+        imported_count += 1;
+    }
+
+    storage::svv(&vault, password)?;
+
+    let config = crate::config::load_config()?;
+    if config.auto_backup {
+        crate::backup::create_backup(vault_name, config.max_backups, false)?;
+    }
+
+    Ok((imported_count, skipped_count))
+}
+
+/// Export CSV with filters
+pub fn export_csv_filtered(
+    vault_name: &str,
+    password: &str,
+    output_path: &str,
+    filter_tag: Option<&str>,
+    filter_search: Option<&str>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use crate::storage;
+    
+    let vault = storage::ld_vt(password)?;
+
+    let filtered_entries: Vec<&Entry> = vault
+        .e
+        .iter()
+        .filter(|e| {
+            if let Some(tag) = filter_tag {
+                if !e.tags.contains(&tag.to_string()) {
+                    return false;
+                }
+            }
+            
+            if let Some(search) = filter_search {
+                let query = search.to_lowercase();
+                if !e.n.to_lowercase().contains(&query)
+                    && !e.u.to_lowercase().contains(&query)
+                    && !e.url.as_ref().map_or(false, |u| u.to_lowercase().contains(&query))
+                {
+                    return false;
+                }
+            }
+            
+            true
+        })
+        .collect();
+
+    if filtered_entries.is_empty() {
+        return Err("No entries match the filter criteria".into());
+    }
+
+    let mut csv_content = String::from("name,username,password,url,notes,tags,2fa_secret\n");
+
+    for entry in &filtered_entries {
+        let name = esc_csv(&entry.n);
+        let username = esc_csv(&entry.u);
+        let password_val = esc_csv(&entry.p);
+        let url = entry.url.as_ref().map_or(String::new(), |u| esc_csv(u));
+        let notes = entry.nt.as_ref().map_or(String::new(), |n| esc_csv(n));
+        let tags = esc_csv(&entry.tags.join(";"));
+        let totp = entry
+            .totp_secret
+            .as_ref()
+            .map_or(String::new(), |t| esc_csv(t));
+
+        writeln!(
+            csv_content,
+            "{name},{username},{password_val},{url},{totp},{tags},{notes}"
+        )?;
+    }
+
+    std::fs::write(output_path, csv_content)?;
+
+    println!("[✔] Exported {} entries to CSV: {}", filtered_entries.len(), output_path);
+    println!("[!] WARNING: This is Plaintext, delete after use.");
+
+    Ok(())
 }
