@@ -48,7 +48,6 @@ impl Theme {
 
     pub fn from_name(name: &str) -> Theme {
         match name {
-            "GruvboxDark" | "Gruvbox Dark" => Theme::Gruvbox,
             "Dracula" => Theme::Dracula,
             "Nord" => Theme::Nord,
             "TokyoNight" | "Tokyo Night" => Theme::TokyoNight,
@@ -62,7 +61,7 @@ impl Theme {
         }
     }
 
-    pub fn to_config_name(&self) -> String {
+    pub fn to_config_name(self) -> String {
         match self {
             Theme::Gruvbox => "GruvboxDark",
             Theme::Dracula => "Dracula",

@@ -775,7 +775,7 @@ pub fn import_csv_smart(
                 continue;
             } else if merge_duplicates {
                 let entry = &mut vault.e[existing_idx];
-                entry.p = password_val.clone();
+                entry.p.clone_from(&password_val);
 
                 if let Some(url) = fields.get(3).filter(|s| !s.is_empty()) {
                     entry.url = Some(url.clone());

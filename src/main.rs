@@ -106,10 +106,13 @@ fn process_command(args: &[String], active_vault: &str) -> Result<(), Box<dyn st
 }
 
 /// Handle import command with preview and smart duplicate handling
+#[allow(clippy::too_many_lines)]
 fn handle_import_cmd(
     args: &[String],
     active_vault: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    use std::io::Write;
+    use std::path::Path;
     if args.is_empty() {
         println!("Import Commands:");
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -147,8 +150,14 @@ fn handle_import_cmd(
 
             let file_path = &args[1];
 
-            let is_csv = file_path.ends_with(".csv");
-            let is_json = file_path.ends_with(".json");
+            let path = Path::new(file_path);
+
+            let is_csv = path
+                .extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("csv"));
+            let is_json = path
+                .extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("json"));
 
             if !is_csv && !is_json {
                 return Err("File must be .csv or .json".into());
@@ -158,7 +167,6 @@ fn handle_import_cmd(
             println!();
 
             println!("Enter vault password to check for duplicates:");
-            use std::io::Write;
             std::io::stdout().flush()?;
             let password = rpassword::read_password()?;
 
@@ -222,9 +230,7 @@ fn handle_import_cmd(
                 println!("  --merge-duplicates     Update existing entries with new data");
                 println!();
                 println!("Example:");
-                println!(
-                    "  passlock import csv <password> {file_path} --skip-duplicates"
-                );
+                println!("  passlock import csv <password> {file_path} --skip-duplicates");
             }
 
             println!("To import this file:");
@@ -297,6 +303,7 @@ fn handle_import_cmd(
 }
 
 /// Handle export command with filters
+#[allow(clippy::too_many_lines)]
 fn handle_export_cmd(
     args: &[String],
     active_vault: &str,

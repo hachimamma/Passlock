@@ -835,6 +835,7 @@ pub fn handle_import_json(app: &mut App, key: KeyCode) {
 }
 
 pub fn handle_import_preview(app: &mut App, key: KeyCode) {
+    use std::path::Path;
     match key {
         KeyCode::Esc => {
             app.import_preview = None;
@@ -859,7 +860,9 @@ pub fn handle_import_preview(app: &mut App, key: KeyCode) {
                 }
             };
 
-            let is_csv = app.import_file_path.ends_with(".csv");
+            let is_csv = Path::new(&app.import_file_path)
+                .extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("csv"));
 
             let result = if is_csv {
                 if app.duplicate_handling == 0 {
@@ -892,9 +895,7 @@ pub fn handle_import_preview(app: &mut App, key: KeyCode) {
                             }
 
                             let msg = if skipped > 0 {
-                                format!(
-                                    "Imported {imported} entries, skipped {skipped} duplicates"
-                                )
+                                format!("Imported {imported} entries, skipped {skipped} duplicates")
                             } else {
                                 "Import successful!".to_string()
                             };
