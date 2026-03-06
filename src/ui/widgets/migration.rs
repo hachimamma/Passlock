@@ -48,10 +48,8 @@ pub fn draw_import_export_menu(f: &mut Frame, size: Rect, app: &App) {
         .alignment(Alignment::Center);
     f.render_widget(title, chunks[0]);
 
-    let import_items = vec![
-        ("1", "Import from CSV", "Import passwords from CSV file"),
-        ("2", "Import from JSON", "Import passwords from JSON file"),
-    ];
+    let import_items = [("1", "Import from CSV", "Import passwords from CSV file"),
+        ("2", "Import from JSON", "Import passwords from JSON file")];
 
     let import_lines: Vec<Line> = std::iter::once(Line::from(vec![Span::styled(
         "IMPORT:",
@@ -60,23 +58,28 @@ pub fn draw_import_export_menu(f: &mut Frame, size: Rect, app: &App) {
             .add_modifier(Modifier::BOLD),
     )]))
     .chain(std::iter::once(Line::from("")))
-    .chain(import_items.iter().enumerate().map(|(i, (num, title, desc))| {
-        let is_selected = app.import_export_menu_index == i;
-        let prefix = if is_selected { "▶ " } else { "  " };
-        let style = if is_selected {
-            Style::default()
-                .fg(app.theme.yellow())
-                .add_modifier(Modifier::BOLD)
-        } else {
-            Style::default().fg(app.theme.fg())
-        };
+    .chain(
+        import_items
+            .iter()
+            .enumerate()
+            .map(|(i, (num, title, desc))| {
+                let is_selected = app.import_export_menu_index == i;
+                let prefix = if is_selected { "▶ " } else { "  " };
+                let style = if is_selected {
+                    Style::default()
+                        .fg(app.theme.yellow())
+                        .add_modifier(Modifier::BOLD)
+                } else {
+                    Style::default().fg(app.theme.fg())
+                };
 
-        Line::from(vec![
-            Span::styled(prefix, Style::default().fg(app.theme.yellow())),
-            Span::styled(format!("[{num}] {title}"), style),
-            Span::styled(format!(" - {desc}"), Style::default().fg(app.theme.gray())),
-        ])
-    }))
+                Line::from(vec![
+                    Span::styled(prefix, Style::default().fg(app.theme.yellow())),
+                    Span::styled(format!("[{num}] {title}"), style),
+                    Span::styled(format!(" - {desc}"), Style::default().fg(app.theme.gray())),
+                ])
+            }),
+    )
     .collect();
 
     let import_widget = Paragraph::new(import_lines).block(
@@ -87,16 +90,10 @@ pub fn draw_import_export_menu(f: &mut Frame, size: Rect, app: &App) {
     );
     f.render_widget(import_widget, chunks[2]);
 
-    let export_items = vec![
-        ("3", "Export to CSV (All)", "Export all passwords to CSV"),
-        (
-            "4",
-            "Export to CSV (Filtered)",
-            "Export filtered passwords",
-        ),
+    let export_items = [("3", "Export to CSV (All)", "Export all passwords to CSV"),
+        ("4", "Export to CSV (Filtered)", "Export filtered passwords"),
         ("5", "Export to JSON", "Export to JSON format"),
-        ("6", "Export Encrypted Vault", "Export encrypted backup"),
-    ];
+        ("6", "Export Encrypted Vault", "Export encrypted backup")];
 
     let export_lines: Vec<Line> = std::iter::once(Line::from(vec![Span::styled(
         "EXPORT:",
@@ -105,24 +102,29 @@ pub fn draw_import_export_menu(f: &mut Frame, size: Rect, app: &App) {
             .add_modifier(Modifier::BOLD),
     )]))
     .chain(std::iter::once(Line::from("")))
-    .chain(export_items.iter().enumerate().map(|(i, (num, title, desc))| {
-        let menu_idx = i + 2;
-        let is_selected = app.import_export_menu_index == menu_idx;
-        let prefix = if is_selected { "▶ " } else { "  " };
-        let style = if is_selected {
-            Style::default()
-                .fg(app.theme.yellow())
-                .add_modifier(Modifier::BOLD)
-        } else {
-            Style::default().fg(app.theme.fg())
-        };
+    .chain(
+        export_items
+            .iter()
+            .enumerate()
+            .map(|(i, (num, title, desc))| {
+                let menu_idx = i + 2;
+                let is_selected = app.import_export_menu_index == menu_idx;
+                let prefix = if is_selected { "▶ " } else { "  " };
+                let style = if is_selected {
+                    Style::default()
+                        .fg(app.theme.yellow())
+                        .add_modifier(Modifier::BOLD)
+                } else {
+                    Style::default().fg(app.theme.fg())
+                };
 
-        Line::from(vec![
-            Span::styled(prefix, Style::default().fg(app.theme.yellow())),
-            Span::styled(format!("[{num}] {title}"), style),
-            Span::styled(format!(" - {desc}"), Style::default().fg(app.theme.gray())),
-        ])
-    }))
+                Line::from(vec![
+                    Span::styled(prefix, Style::default().fg(app.theme.yellow())),
+                    Span::styled(format!("[{num}] {title}"), style),
+                    Span::styled(format!(" - {desc}"), Style::default().fg(app.theme.gray())),
+                ])
+            }),
+    )
     .collect();
 
     let export_widget = Paragraph::new(export_lines).block(
@@ -338,19 +340,22 @@ pub fn draw_import_preview(f: &mut Frame, size: Rect, app: &App) {
         .direction(Direction::Vertical)
         .margin(3)
         .constraints([
-            Constraint::Length(6),  // stats
-            Constraint::Length(1),  // spacer
-            Constraint::Min(8),     // sample entries
-            Constraint::Length(1),  // spacer
-            Constraint::Length(7),  // deuplicate handle
-            Constraint::Length(2),  // help
+            Constraint::Length(6), // stats
+            Constraint::Length(1), // spacer
+            Constraint::Min(8),    // sample entries
+            Constraint::Length(1), // spacer
+            Constraint::Length(7), // deuplicate handle
+            Constraint::Length(2), // help
         ])
         .split(area);
 
     if let Some(ref preview) = app.import_preview {
         let stats_lines = vec![
             Line::from(vec![
-                Span::styled("Total entries in file:  ", Style::default().fg(app.theme.gray())),
+                Span::styled(
+                    "Total entries in file:  ",
+                    Style::default().fg(app.theme.gray()),
+                ),
                 Span::styled(
                     format!("{}", preview.total_entries),
                     Style::default()
@@ -359,7 +364,10 @@ pub fn draw_import_preview(f: &mut Frame, size: Rect, app: &App) {
                 ),
             ]),
             Line::from(vec![
-                Span::styled("Valid entries:          ", Style::default().fg(app.theme.gray())),
+                Span::styled(
+                    "Valid entries:          ",
+                    Style::default().fg(app.theme.gray()),
+                ),
                 Span::styled(
                     format!("{}", preview.valid_entries),
                     Style::default()
@@ -368,14 +376,20 @@ pub fn draw_import_preview(f: &mut Frame, size: Rect, app: &App) {
                 ),
             ]),
             Line::from(vec![
-                Span::styled("Empty/invalid entries:  ", Style::default().fg(app.theme.gray())),
+                Span::styled(
+                    "Empty/invalid entries:  ",
+                    Style::default().fg(app.theme.gray()),
+                ),
                 Span::styled(
                     format!("{}", preview.empty_entries),
                     Style::default().fg(app.theme.red()),
                 ),
             ]),
             Line::from(vec![
-                Span::styled("Duplicates found:       ", Style::default().fg(app.theme.gray())),
+                Span::styled(
+                    "Duplicates found:       ",
+                    Style::default().fg(app.theme.gray()),
+                ),
                 Span::styled(
                     format!("{}", preview.duplicates),
                     Style::default()
@@ -420,39 +434,31 @@ pub fn draw_import_preview(f: &mut Frame, size: Rect, app: &App) {
                                     .fg(app.theme.fg())
                                     .add_modifier(Modifier::BOLD),
                             ),
-                            Span::styled(
-                                dup_marker,
-                                Style::default().fg(app.theme.orange()),
-                            ),
-                            Span::styled(
-                                totp_marker,
-                                Style::default().fg(app.theme.green()),
-                            ),
+                            Span::styled(dup_marker, Style::default().fg(app.theme.orange())),
+                            Span::styled(totp_marker, Style::default().fg(app.theme.green())),
                         ]),
                         Line::from(vec![
                             Span::styled("   Username: ", Style::default().fg(app.theme.gray())),
                             Span::styled(&entry.username, Style::default().fg(app.theme.blue())),
                         ]),
                     ];
-                    
+
                     if let Some(ref url) = entry.url {
                         lines.push(Line::from(vec![
                             Span::styled("   URL: ", Style::default().fg(app.theme.gray())),
                             Span::styled(url, Style::default().fg(app.theme.aqua())),
                         ]));
                     }
-                    
+
                     lines.push(Line::from(""));
                     lines
                 }),
         )
         .chain(if preview.entries.len() > 5 {
-            vec![
-                Line::from(vec![Span::styled(
-                    format!("... and {} more entries", preview.entries.len() - 5),
-                    Style::default().fg(app.theme.gray()),
-                )]),
-            ]
+            vec![Line::from(vec![Span::styled(
+                format!("... and {} more entries", preview.entries.len() - 5),
+                Style::default().fg(app.theme.gray()),
+            )])]
         } else {
             vec![]
         })
@@ -466,11 +472,9 @@ pub fn draw_import_preview(f: &mut Frame, size: Rect, app: &App) {
         );
         f.render_widget(sample, chunks[2]);
 
-        let dup_options = vec![
-            ("Import all (create duplicates)", 0),
+        let dup_options = [("Import all (create duplicates)", 0),
             ("Skip duplicates (keep existing)", 1),
-            ("Merge/update duplicates", 2),
-        ];
+            ("Merge/update duplicates", 2)];
 
         let dup_lines: Vec<Line> = std::iter::once(Line::from(vec![Span::styled(
             "Duplicate handling:",
@@ -561,11 +565,9 @@ pub fn draw_export_csv(f: &mut Frame, size: Rect, app: &App) {
         .alignment(Alignment::Center);
     f.render_widget(title, chunks[0]);
 
-    let filter_options = vec![
-        ("All entries", 0),
+    let filter_options = [("All entries", 0),
         ("Filter by tag", 1),
-        ("Filter by search", 2),
-    ];
+        ("Filter by search", 2)];
 
     let filter_lines: Vec<Line> = std::iter::once(Line::from(vec![Span::styled(
         "Filter by:",

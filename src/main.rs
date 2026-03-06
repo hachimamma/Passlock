@@ -154,7 +154,7 @@ fn handle_import_cmd(
                 return Err("File must be .csv or .json".into());
             }
 
-            println!("[...] Analyzing file: {}", file_path);
+            println!("[...] Analyzing file: {file_path}");
             println!();
 
             println!("Enter vault password to check for duplicates:");
@@ -180,7 +180,7 @@ fn handle_import_cmd(
             if !preview.errors.is_empty() {
                 println!("Errors:");
                 for error in &preview.errors {
-                    println!("  {}", error);
+                    println!("  {error}");
                 }
                 println!();
             }
@@ -197,16 +197,10 @@ fn handle_import_cmd(
                     };
                     let totp_marker = if entry.has_totp { " [2FA]" } else { "" };
 
-                    println!(
-                        "{}. {}{}{}",
-                        idx + 1,
-                        entry.name,
-                        dup_marker,
-                        totp_marker
-                    );
+                    println!("{}. {}{}{}", idx + 1, entry.name, dup_marker, totp_marker);
                     println!("   Username: {}", entry.username);
                     if let Some(ref url) = entry.url {
-                        println!("   URL: {}", url);
+                        println!("   URL: {url}");
                     }
                     if !entry.tags.is_empty() {
                         println!("   Tags: {}", entry.tags.join(", "));
@@ -221,10 +215,7 @@ fn handle_import_cmd(
             }
 
             if preview.duplicates > 0 {
-                println!(
-                    "WARNING: {} duplicate entries found!",
-                    preview.duplicates
-                );
+                println!("WARNING: {} duplicate entries found!", preview.duplicates);
                 println!();
                 println!("Options for handling duplicates:");
                 println!("  --skip-duplicates      Skip duplicate entries (keep existing)");
@@ -232,16 +223,15 @@ fn handle_import_cmd(
                 println!();
                 println!("Example:");
                 println!(
-                    "  passlock import csv <password> {} --skip-duplicates",
-                    file_path
+                    "  passlock import csv <password> {file_path} --skip-duplicates"
                 );
             }
 
             println!("To import this file:");
             if is_csv {
-                println!("  passlock import csv <password> {}", file_path);
+                println!("  passlock import csv <password> {file_path}");
             } else {
-                println!("  passlock import json <password> {}", file_path);
+                println!("  passlock import json <password> {file_path}");
             }
         }
         "csv" => {
@@ -276,10 +266,10 @@ fn handle_import_cmd(
                     merge_duplicates,
                 )?;
 
-                println!("[✔] Import completed to vault '{}'", active_vault);
-                println!("[✔] Imported/Updated: {} entries", imported);
+                println!("[✔] Import completed to vault '{active_vault}'");
+                println!("[✔] Imported/Updated: {imported} entries");
                 if skipped > 0 {
-                    println!("[!] Skipped: {} entries", skipped);
+                    println!("[!] Skipped: {skipped} entries");
                 }
             } else {
                 backup::import_csv(active_vault, password, file_path)?;

@@ -30,7 +30,10 @@ use widgets::{
     draw_unlock_vault, draw_view_pwds,
 };
 
-use crate::ui::handlers::{handle_export_csv, handle_export_json, handle_export_vault, handle_import_csv, handle_import_export_menu, handle_import_json, handle_import_preview};
+use crate::ui::handlers::{
+    handle_export_csv, handle_export_json, handle_export_vault, handle_import_csv,
+    handle_import_export_menu, handle_import_json, handle_import_preview,
+};
 
 pub fn run_tui() -> Result<(), Box<dyn std::error::Error>> {
     enable_raw_mode()?;
@@ -464,7 +467,9 @@ fn run_app<B: ratatui::backend::Backend>(
                             }
                             Screen::Help => handle_help_screen(app, key_event.code),
                             Screen::Settings => handle_settings_screen(app, key_event.code),
-                            Screen::ImportExportMenu => handle_import_export_menu(app, key_event.code),
+                            Screen::ImportExportMenu => {
+                                handle_import_export_menu(app, key_event.code);
+                            }
                             Screen::ImportCSV => handle_import_csv(app, key_event.code),
                             Screen::ImportJSON => handle_import_json(app, key_event.code),
                             Screen::ImportPreview => handle_import_preview(app, key_event.code),

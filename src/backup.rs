@@ -231,7 +231,7 @@ pub fn export_csv(vault_name: &str, password: &str, output_path: &str) -> Result
         let password_val = esc_csv(&entry.p);
         let url = entry.url.as_ref().map_or(String::new(), |u| esc_csv(u));
         let notes = entry.nt.as_ref().map_or(String::new(), |n| esc_csv(n));
-        
+
         let tags = esc_csv(&entry.tags.join(";"));
         let totp = entry
             .totp_secret
@@ -867,7 +867,7 @@ pub fn export_csv_filtered(
                     && !e
                         .url
                         .as_ref()
-                        .map_or(false, |u| u.to_lowercase().contains(&query))
+                        .is_some_and(|u| u.to_lowercase().contains(&query))
                 {
                     return false;
                 }
@@ -889,7 +889,7 @@ pub fn export_csv_filtered(
         let password_val = esc_csv(&entry.p);
         let url = entry.url.as_ref().map_or(String::new(), |u| esc_csv(u));
         let notes = entry.nt.as_ref().map_or(String::new(), |n| esc_csv(n));
-        
+
         let tags = esc_csv(&entry.tags.join(";"));
         let totp = entry
             .totp_secret

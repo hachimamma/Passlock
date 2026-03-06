@@ -1,8 +1,8 @@
 use super::app::App;
 use super::screens::{InputField, MessageType, Screen};
-use crossterm::event::KeyCode;
 use crate::backup;
 use crate::config;
+use crossterm::event::KeyCode;
 
 pub fn handle_cvi(app: &mut App, key: KeyCode) {
     match key {
@@ -764,19 +764,23 @@ pub fn handle_import_csv(app: &mut App, key: KeyCode) {
             let cfg = match config::load_config() {
                 Ok(c) => c,
                 Err(e) => {
-                    app.set_msg(&format!("Config error: {}", e), MessageType::Error);
+                    app.set_msg(&format!("Config error: {e}"), MessageType::Error);
                     return;
                 }
             };
 
-            match backup::preview_csv_import(&cfg.active_vault, &app.master_pwd, &app.import_file_path) {
+            match backup::preview_csv_import(
+                &cfg.active_vault,
+                &app.master_pwd,
+                &app.import_file_path,
+            ) {
                 Ok(preview) => {
                     app.import_preview = Some(preview);
                     app.duplicate_handling = 0;
                     app.screen = Screen::ImportPreview;
                 }
                 Err(e) => {
-                    app.set_msg(&format!("Preview failed: {}", e), MessageType::Error);
+                    app.set_msg(&format!("Preview failed: {e}"), MessageType::Error);
                 }
             }
         }
@@ -806,19 +810,23 @@ pub fn handle_import_json(app: &mut App, key: KeyCode) {
             let cfg = match config::load_config() {
                 Ok(c) => c,
                 Err(e) => {
-                    app.set_msg(&format!("Config error: {}", e), MessageType::Error);
+                    app.set_msg(&format!("Config error: {e}"), MessageType::Error);
                     return;
                 }
             };
 
-            match backup::preview_json_import(&cfg.active_vault, &app.master_pwd, &app.import_file_path) {
+            match backup::preview_json_import(
+                &cfg.active_vault,
+                &app.master_pwd,
+                &app.import_file_path,
+            ) {
                 Ok(preview) => {
                     app.import_preview = Some(preview);
                     app.duplicate_handling = 0;
                     app.screen = Screen::ImportPreview;
                 }
                 Err(e) => {
-                    app.set_msg(&format!("Preview failed: {}", e), MessageType::Error);
+                    app.set_msg(&format!("Preview failed: {e}"), MessageType::Error);
                 }
             }
         }
@@ -846,7 +854,7 @@ pub fn handle_import_preview(app: &mut App, key: KeyCode) {
             let cfg = match config::load_config() {
                 Ok(c) => c,
                 Err(e) => {
-                    app.set_msg(&format!("Config error: {}", e), MessageType::Error);
+                    app.set_msg(&format!("Config error: {e}"), MessageType::Error);
                     return;
                 }
             };
@@ -856,7 +864,7 @@ pub fn handle_import_preview(app: &mut App, key: KeyCode) {
             let result = if is_csv {
                 if app.duplicate_handling == 0 {
                     backup::import_csv(&cfg.active_vault, &app.master_pwd, &app.import_file_path)
-                        .map(|_| (0, 0))
+                        .map(|()| (0, 0))
                 } else {
                     let skip = app.duplicate_handling == 1;
                     let merge = app.duplicate_handling == 2;
@@ -870,7 +878,7 @@ pub fn handle_import_preview(app: &mut App, key: KeyCode) {
                 }
             } else {
                 backup::import_json(&cfg.active_vault, &app.master_pwd, &app.import_file_path)
-                    .map(|_| (0, 0))
+                    .map(|()| (0, 0))
             };
 
             match result {
@@ -884,14 +892,19 @@ pub fn handle_import_preview(app: &mut App, key: KeyCode) {
                             }
 
                             let msg = if skipped > 0 {
-                                format!("Imported {} entries, skipped {} duplicates", imported, skipped)
+                                format!(
+                                    "Imported {imported} entries, skipped {skipped} duplicates"
+                                )
                             } else {
                                 "Import successful!".to_string()
                             };
                             app.set_msg(&msg, MessageType::Success);
                         }
                         Err(e) => {
-                            app.set_msg(&format!("Failed to reload vault: {}", e), MessageType::Error);
+                            app.set_msg(
+                                &format!("Failed to reload vault: {e}"),
+                                MessageType::Error,
+                            );
                         }
                     }
 
@@ -900,7 +913,7 @@ pub fn handle_import_preview(app: &mut App, key: KeyCode) {
                     app.screen = Screen::MainMenu;
                 }
                 Err(e) => {
-                    app.set_msg(&format!("Import failed: {}", e), MessageType::Error);
+                    app.set_msg(&format!("Import failed: {e}"), MessageType::Error);
                 }
             }
         }
@@ -941,7 +954,7 @@ pub fn handle_export_csv(app: &mut App, key: KeyCode) {
             let cfg = match config::load_config() {
                 Ok(c) => c,
                 Err(e) => {
-                    app.set_msg(&format!("Config error: {}", e), MessageType::Error);
+                    app.set_msg(&format!("Config error: {e}"), MessageType::Error);
                     return;
                 }
             };
@@ -949,19 +962,22 @@ pub fn handle_export_csv(app: &mut App, key: KeyCode) {
             let result = if app.export_filter_type == 0 {
                 backup::export_csv(&cfg.active_vault, &app.master_pwd, &app.export_file_path)
             } else {
-                app.set_msg("Filtered export: Enter filter value first", MessageType::Info);
+                app.set_msg(
+                    "Filtered export: Enter filter value first",
+                    MessageType::Info,
+                );
                 return;
             };
 
             match result {
-                Ok(_) => {
+                Ok(()) => {
                     app.set_msg("Export successful!", MessageType::Success);
                     app.export_file_path.clear();
                     app.export_filter_value.clear();
                     app.screen = Screen::MainMenu;
                 }
                 Err(e) => {
-                    app.set_msg(&format!("Export failed: {}", e), MessageType::Error);
+                    app.set_msg(&format!("Export failed: {e}"), MessageType::Error);
                 }
             }
         }
@@ -991,19 +1007,19 @@ pub fn handle_export_json(app: &mut App, key: KeyCode) {
             let cfg = match config::load_config() {
                 Ok(c) => c,
                 Err(e) => {
-                    app.set_msg(&format!("Config error: {}", e), MessageType::Error);
+                    app.set_msg(&format!("Config error: {e}"), MessageType::Error);
                     return;
                 }
             };
 
             match backup::export_json(&cfg.active_vault, &app.master_pwd, &app.export_file_path) {
-                Ok(_) => {
+                Ok(()) => {
                     app.set_msg("Export successful!", MessageType::Success);
                     app.export_file_path.clear();
                     app.screen = Screen::MainMenu;
                 }
                 Err(e) => {
-                    app.set_msg(&format!("Export failed: {}", e), MessageType::Error);
+                    app.set_msg(&format!("Export failed: {e}"), MessageType::Error);
                 }
             }
         }
@@ -1033,19 +1049,19 @@ pub fn handle_export_vault(app: &mut App, key: KeyCode) {
             let cfg = match config::load_config() {
                 Ok(c) => c,
                 Err(e) => {
-                    app.set_msg(&format!("Config error: {}", e), MessageType::Error);
+                    app.set_msg(&format!("Config error: {e}"), MessageType::Error);
                     return;
                 }
             };
 
             match backup::export_vault(&cfg.active_vault, &app.master_pwd, &app.export_file_path) {
-                Ok(_) => {
+                Ok(()) => {
                     app.set_msg("Encrypted vault exported!", MessageType::Success);
                     app.export_file_path.clear();
                     app.screen = Screen::MainMenu;
                 }
                 Err(e) => {
-                    app.set_msg(&format!("Export failed: {}", e), MessageType::Error);
+                    app.set_msg(&format!("Export failed: {e}"), MessageType::Error);
                 }
             }
         }
