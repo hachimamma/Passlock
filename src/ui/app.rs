@@ -53,10 +53,23 @@ pub struct App {
     pub menu_click_map: Vec<(u16, u16, u16, u16, usize)>,
     pub rr_ms: u64,
     pub rr_cmap: Vec<(u16, u16, u16, u16)>,
+    pub import_export_menu_index: usize,
+    pub import_file_path: String,
+    pub export_file_path: String,
+    pub import_preview: Option<crate::backup::ImportPreview>,
+    pub duplicate_handling: usize,
+    pub export_filter_type: usize,
+    pub export_filter_value: String,
 }
 
 impl App {
     pub fn new() -> Self {
+        let theme = if let Ok(cfg) = crate::config::load_config() {
+            Theme::from_name(&cfg.theme)
+        } else {
+            Theme::default()
+        };
+
         Self {
             screen: Screen::VaultCheck,
             vault: None,
@@ -86,7 +99,7 @@ impl App {
             active_tf: None,
             edit_eid: String::new(),
             should_quit: false,
-            theme: Theme::default(),
+            theme,
             theme_selector_index: 0,
             options_menu_index: 0,
             settings_menu_index: 0,
@@ -104,6 +117,13 @@ impl App {
             menu_click_map: Vec::new(),
             rr_ms: 100,
             rr_cmap: Vec::new(),
+            import_export_menu_index: 0,
+            import_file_path: String::new(),
+            export_file_path: String::new(),
+            import_preview: None,
+            duplicate_handling: 0,
+            export_filter_type: 0,
+            export_filter_value: String::new(),
         }
     }
 
@@ -433,6 +453,13 @@ impl App {
             } else {
                 format!("{years} years ago")
             }
+        }
+    }
+
+    pub fn save_theme(&self) {
+        if let Ok(mut cfg) = crate::config::load_config() {
+            cfg.theme = self.theme.to_config_name();
+            let _ = crate::config::save_config(&cfg);
         }
     }
 }

@@ -16,6 +16,13 @@ pub enum Screen {
     OptionsMenu,
     Help,
     Settings,
+    ImportExportMenu,
+    ImportCSV,
+    ImportJSON,
+    ImportPreview,
+    ExportCSV,
+    ExportJSON,
+    ExportVault,
 }
 
 #[derive(Clone, PartialEq)]

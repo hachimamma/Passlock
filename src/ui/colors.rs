@@ -46,6 +46,38 @@ impl Theme {
         }
     }
 
+    pub fn from_name(name: &str) -> Theme {
+        match name {
+            "GruvboxDark" | "Gruvbox Dark" => Theme::Gruvbox,
+            "Dracula" => Theme::Dracula,
+            "Nord" => Theme::Nord,
+            "TokyoNight" | "Tokyo Night" => Theme::TokyoNight,
+            "Catppuccin" | "Catppuccin Mocha" => Theme::Catppuccin,
+            "SolarizedDark" | "Solarized Dark" => Theme::Solarized,
+            "OneDark" | "One Dark" => Theme::OneDark,
+            "Cyberpunk" => Theme::Cyberpunk,
+            "HighContrastDark" | "High Contrast Dark" => Theme::HighContrastDark,
+            "HighContrastLight" | "High Contrast Light" => Theme::HighContrastLight,
+            _ => Theme::Gruvbox,
+        }
+    }
+
+    pub fn to_config_name(&self) -> String {
+        match self {
+            Theme::Gruvbox => "GruvboxDark",
+            Theme::Dracula => "Dracula",
+            Theme::Nord => "Nord",
+            Theme::TokyoNight => "TokyoNight",
+            Theme::Catppuccin => "Catppuccin",
+            Theme::Solarized => "SolarizedDark",
+            Theme::OneDark => "OneDark",
+            Theme::Cyberpunk => "Cyberpunk",
+            Theme::HighContrastDark => "HighContrastDark",
+            Theme::HighContrastLight => "HighContrastLight",
+        }
+        .to_string()
+    }
+
     pub fn next(self) -> Theme {
         match self {
             Theme::Gruvbox => Theme::Dracula,

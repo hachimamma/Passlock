@@ -1,6 +1,8 @@
 use super::app::App;
 use super::screens::{InputField, MessageType, Screen};
 use crossterm::event::KeyCode;
+use crate::backup;
+use crate::config;
 
 pub fn handle_cvi(app: &mut App, key: KeyCode) {
     match key {
@@ -67,7 +69,7 @@ pub fn handle_mmi(app: &mut App, key: KeyCode) -> bool {
             }
         }
         KeyCode::Down => {
-            if app.selected_menu < 6 {
+            if app.selected_menu < 7 {
                 app.selected_menu += 1;
                 if app.selected_menu < 3 {
                     app.selected_section = 0;
@@ -130,12 +132,17 @@ pub fn handle_mmi(app: &mut App, key: KeyCode) -> bool {
                 }
             }
         }
-        KeyCode::Char('7') => return true,
+        KeyCode::Char('7') => {
+            app.screen = Screen::ImportExportMenu;
+            app.import_export_menu_index = 0;
+            app.msg.clear();
+        }
+        KeyCode::Char('8') => return true,
         KeyCode::Esc => {
             app.screen = Screen::OptionsMenu;
             app.options_menu_index = 0;
         }
-        KeyCode::Char('8' | 't' | 'T') => {
+        KeyCode::Char('t' | 'T') => {
             use super::colors::Theme;
             app.screen = Screen::ThemeSelector;
             app.theme_selector_index = Theme::all()
@@ -183,7 +190,11 @@ pub fn handle_mmi(app: &mut App, key: KeyCode) -> bool {
                         }
                     }
                 }
-                6 => return true,
+                6 => {
+                    app.screen = Screen::ImportExportMenu;
+                    app.import_export_menu_index = 0;
+                }
+                7 => return true,
                 _ => {}
             }
         }
@@ -521,6 +532,7 @@ pub fn handle_theme_selector(app: &mut App, key: KeyCode) {
                 &format!("Theme changed to: {}", app.theme.name()),
                 MessageType::Success,
             );
+            app.save_theme();
         }
         KeyCode::Esc => {
             app.screen = Screen::MainMenu;
@@ -609,7 +621,7 @@ pub fn handle_settings_screen(app: &mut App, key: KeyCode) {
         }
         KeyCode::Char('3') => {
             // auto save toggle (future feature)
-            app.set_msg("Auto-save coming soon!", MessageType::Info);
+            app.set_msg("Auto-backup coming soon!", MessageType::Info);
         }
         KeyCode::Enter => match app.settings_menu_index {
             0 => {
@@ -660,5 +672,383 @@ pub fn handle_settings_screen(app: &mut App, key: KeyCode) {
 pub fn handle_help_screen(app: &mut App, key: KeyCode) {
     if key == KeyCode::Esc || key == KeyCode::Char('q') || key == KeyCode::Char('Q') {
         app.screen = Screen::OptionsMenu;
+    }
+}
+
+pub fn handle_import_export_menu(app: &mut App, key: KeyCode) {
+    match key {
+        KeyCode::Esc | KeyCode::Char('q') => {
+            app.import_export_menu_index = 0;
+            app.screen = Screen::MainMenu;
+        }
+        KeyCode::Down | KeyCode::Char('j') => {
+            if app.import_export_menu_index < 5 {
+                app.import_export_menu_index += 1;
+            }
+        }
+        KeyCode::Up | KeyCode::Char('k') => {
+            if app.import_export_menu_index > 0 {
+                app.import_export_menu_index -= 1;
+            }
+        }
+        KeyCode::Enter | KeyCode::Char('1'..='6') => {
+            let selection = if let KeyCode::Char(c) = key {
+                c.to_digit(10).map(|d| d as usize - 1)
+            } else {
+                Some(app.import_export_menu_index)
+            };
+
+            if let Some(idx) = selection {
+                match idx {
+                    0 => {
+                        app.import_file_path.clear();
+                        app.msg.clear();
+                        app.screen = Screen::ImportCSV;
+                    }
+                    1 => {
+                        app.import_file_path.clear();
+                        app.msg.clear();
+                        app.screen = Screen::ImportJSON;
+                    }
+                    2 => {
+                        app.export_file_path.clear();
+                        app.export_filter_type = 0;
+                        app.export_filter_value.clear();
+                        app.msg.clear();
+                        app.screen = Screen::ExportCSV;
+                    }
+                    3 => {
+                        app.export_file_path.clear();
+                        app.export_filter_type = 1;
+                        app.export_filter_value.clear();
+                        app.msg.clear();
+                        app.screen = Screen::ExportCSV;
+                    }
+                    4 => {
+                        app.export_file_path.clear();
+                        app.msg.clear();
+                        app.screen = Screen::ExportJSON;
+                    }
+                    5 => {
+                        app.export_file_path.clear();
+                        app.msg.clear();
+                        app.screen = Screen::ExportVault;
+                    }
+                    _ => {}
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+pub fn handle_import_csv(app: &mut App, key: KeyCode) {
+    match key {
+        KeyCode::Esc => {
+            app.import_file_path.clear();
+            app.msg.clear();
+            app.screen = Screen::ImportExportMenu;
+        }
+        KeyCode::Char(c) => {
+            app.import_file_path.push(c);
+        }
+        KeyCode::Backspace => {
+            app.import_file_path.pop();
+        }
+        KeyCode::Enter => {
+            if app.import_file_path.is_empty() {
+                app.set_msg("Please enter a file path", MessageType::Error);
+                return;
+            }
+
+            let cfg = match config::load_config() {
+                Ok(c) => c,
+                Err(e) => {
+                    app.set_msg(&format!("Config error: {}", e), MessageType::Error);
+                    return;
+                }
+            };
+
+            match backup::preview_csv_import(&cfg.active_vault, &app.master_pwd, &app.import_file_path) {
+                Ok(preview) => {
+                    app.import_preview = Some(preview);
+                    app.duplicate_handling = 0;
+                    app.screen = Screen::ImportPreview;
+                }
+                Err(e) => {
+                    app.set_msg(&format!("Preview failed: {}", e), MessageType::Error);
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+pub fn handle_import_json(app: &mut App, key: KeyCode) {
+    match key {
+        KeyCode::Esc => {
+            app.import_file_path.clear();
+            app.msg.clear();
+            app.screen = Screen::ImportExportMenu;
+        }
+        KeyCode::Char(c) => {
+            app.import_file_path.push(c);
+        }
+        KeyCode::Backspace => {
+            app.import_file_path.pop();
+        }
+        KeyCode::Enter => {
+            if app.import_file_path.is_empty() {
+                app.set_msg("Please enter a file path", MessageType::Error);
+                return;
+            }
+
+            let cfg = match config::load_config() {
+                Ok(c) => c,
+                Err(e) => {
+                    app.set_msg(&format!("Config error: {}", e), MessageType::Error);
+                    return;
+                }
+            };
+
+            match backup::preview_json_import(&cfg.active_vault, &app.master_pwd, &app.import_file_path) {
+                Ok(preview) => {
+                    app.import_preview = Some(preview);
+                    app.duplicate_handling = 0;
+                    app.screen = Screen::ImportPreview;
+                }
+                Err(e) => {
+                    app.set_msg(&format!("Preview failed: {}", e), MessageType::Error);
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+pub fn handle_import_preview(app: &mut App, key: KeyCode) {
+    match key {
+        KeyCode::Esc => {
+            app.import_preview = None;
+            app.screen = Screen::ImportExportMenu;
+        }
+        KeyCode::Down => {
+            if app.duplicate_handling < 2 {
+                app.duplicate_handling += 1;
+            }
+        }
+        KeyCode::Up => {
+            if app.duplicate_handling > 0 {
+                app.duplicate_handling -= 1;
+            }
+        }
+        KeyCode::Enter => {
+            let cfg = match config::load_config() {
+                Ok(c) => c,
+                Err(e) => {
+                    app.set_msg(&format!("Config error: {}", e), MessageType::Error);
+                    return;
+                }
+            };
+
+            let is_csv = app.import_file_path.ends_with(".csv");
+
+            let result = if is_csv {
+                if app.duplicate_handling == 0 {
+                    backup::import_csv(&cfg.active_vault, &app.master_pwd, &app.import_file_path)
+                        .map(|_| (0, 0))
+                } else {
+                    let skip = app.duplicate_handling == 1;
+                    let merge = app.duplicate_handling == 2;
+                    backup::import_csv_smart(
+                        &cfg.active_vault,
+                        &app.master_pwd,
+                        &app.import_file_path,
+                        skip,
+                        merge,
+                    )
+                }
+            } else {
+                backup::import_json(&cfg.active_vault, &app.master_pwd, &app.import_file_path)
+                    .map(|_| (0, 0))
+            };
+
+            match result {
+                Ok((imported, skipped)) => {
+                    match crate::storage::ld_vt(&app.master_pwd) {
+                        Ok(vault) => {
+                            app.vault = Some(vault);
+                            app.load_at();
+                            if let Some(ref vault) = app.vault {
+                                app.entry_disp = vault.e.clone();
+                            }
+
+                            let msg = if skipped > 0 {
+                                format!("Imported {} entries, skipped {} duplicates", imported, skipped)
+                            } else {
+                                "Import successful!".to_string()
+                            };
+                            app.set_msg(&msg, MessageType::Success);
+                        }
+                        Err(e) => {
+                            app.set_msg(&format!("Failed to reload vault: {}", e), MessageType::Error);
+                        }
+                    }
+
+                    app.import_preview = None;
+                    app.import_file_path.clear();
+                    app.screen = Screen::MainMenu;
+                }
+                Err(e) => {
+                    app.set_msg(&format!("Import failed: {}", e), MessageType::Error);
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+pub fn handle_export_csv(app: &mut App, key: KeyCode) {
+    match key {
+        KeyCode::Esc => {
+            app.export_file_path.clear();
+            app.export_filter_value.clear();
+            app.msg.clear();
+            app.screen = Screen::ImportExportMenu;
+        }
+        KeyCode::Up => {
+            if app.export_filter_type > 0 {
+                app.export_filter_type -= 1;
+            }
+        }
+        KeyCode::Down => {
+            if app.export_filter_type < 2 {
+                app.export_filter_type += 1;
+            }
+        }
+        KeyCode::Char(c) if c != '\t' => {
+            app.export_file_path.push(c);
+        }
+        KeyCode::Backspace => {
+            app.export_file_path.pop();
+        }
+        KeyCode::Enter => {
+            if app.export_file_path.is_empty() {
+                app.set_msg("Please enter output file path", MessageType::Error);
+                return;
+            }
+
+            let cfg = match config::load_config() {
+                Ok(c) => c,
+                Err(e) => {
+                    app.set_msg(&format!("Config error: {}", e), MessageType::Error);
+                    return;
+                }
+            };
+
+            let result = if app.export_filter_type == 0 {
+                backup::export_csv(&cfg.active_vault, &app.master_pwd, &app.export_file_path)
+            } else {
+                app.set_msg("Filtered export: Enter filter value first", MessageType::Info);
+                return;
+            };
+
+            match result {
+                Ok(_) => {
+                    app.set_msg("Export successful!", MessageType::Success);
+                    app.export_file_path.clear();
+                    app.export_filter_value.clear();
+                    app.screen = Screen::MainMenu;
+                }
+                Err(e) => {
+                    app.set_msg(&format!("Export failed: {}", e), MessageType::Error);
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+pub fn handle_export_json(app: &mut App, key: KeyCode) {
+    match key {
+        KeyCode::Esc => {
+            app.export_file_path.clear();
+            app.msg.clear();
+            app.screen = Screen::ImportExportMenu;
+        }
+        KeyCode::Char(c) => {
+            app.export_file_path.push(c);
+        }
+        KeyCode::Backspace => {
+            app.export_file_path.pop();
+        }
+        KeyCode::Enter => {
+            if app.export_file_path.is_empty() {
+                app.set_msg("Please enter output file path", MessageType::Error);
+                return;
+            }
+
+            let cfg = match config::load_config() {
+                Ok(c) => c,
+                Err(e) => {
+                    app.set_msg(&format!("Config error: {}", e), MessageType::Error);
+                    return;
+                }
+            };
+
+            match backup::export_json(&cfg.active_vault, &app.master_pwd, &app.export_file_path) {
+                Ok(_) => {
+                    app.set_msg("Export successful!", MessageType::Success);
+                    app.export_file_path.clear();
+                    app.screen = Screen::MainMenu;
+                }
+                Err(e) => {
+                    app.set_msg(&format!("Export failed: {}", e), MessageType::Error);
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+pub fn handle_export_vault(app: &mut App, key: KeyCode) {
+    match key {
+        KeyCode::Esc => {
+            app.export_file_path.clear();
+            app.msg.clear();
+            app.screen = Screen::ImportExportMenu;
+        }
+        KeyCode::Char(c) => {
+            app.export_file_path.push(c);
+        }
+        KeyCode::Backspace => {
+            app.export_file_path.pop();
+        }
+        KeyCode::Enter => {
+            if app.export_file_path.is_empty() {
+                app.set_msg("Please enter output file path", MessageType::Error);
+                return;
+            }
+
+            let cfg = match config::load_config() {
+                Ok(c) => c,
+                Err(e) => {
+                    app.set_msg(&format!("Config error: {}", e), MessageType::Error);
+                    return;
+                }
+            };
+
+            match backup::export_vault(&cfg.active_vault, &app.master_pwd, &app.export_file_path) {
+                Ok(_) => {
+                    app.set_msg("Encrypted vault exported!", MessageType::Success);
+                    app.export_file_path.clear();
+                    app.screen = Screen::MainMenu;
+                }
+                Err(e) => {
+                    app.set_msg(&format!("Export failed: {}", e), MessageType::Error);
+                }
+            }
+        }
+        _ => {}
     }
 }

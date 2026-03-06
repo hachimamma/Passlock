@@ -30,6 +30,8 @@ use widgets::{
     draw_unlock_vault, draw_view_pwds,
 };
 
+use crate::ui::handlers::{handle_export_csv, handle_export_json, handle_export_vault, handle_import_csv, handle_import_export_menu, handle_import_json, handle_import_preview};
+
 pub fn run_tui() -> Result<(), Box<dyn std::error::Error>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -462,6 +464,13 @@ fn run_app<B: ratatui::backend::Backend>(
                             }
                             Screen::Help => handle_help_screen(app, key_event.code),
                             Screen::Settings => handle_settings_screen(app, key_event.code),
+                            Screen::ImportExportMenu => handle_import_export_menu(app, key_event.code),
+                            Screen::ImportCSV => handle_import_csv(app, key_event.code),
+                            Screen::ImportJSON => handle_import_json(app, key_event.code),
+                            Screen::ImportPreview => handle_import_preview(app, key_event.code),
+                            Screen::ExportCSV => handle_export_csv(app, key_event.code),
+                            Screen::ExportVault => handle_export_vault(app, key_event.code),
+                            Screen::ExportJSON => handle_export_json(app, key_event.code),
                         }
                     }
                 }
@@ -491,6 +500,13 @@ fn ui(f: &mut Frame, app: &mut App) {
         Screen::OptionsMenu => draw_options_menu(f, size, app),
         Screen::Help => draw_help_screen(f, size, app),
         Screen::Settings => draw_settings_screen(f, size, app),
+        Screen::ImportExportMenu => widgets::draw_import_export_menu(f, size, app),
+        Screen::ImportCSV => widgets::draw_import_csv(f, size, app),
+        Screen::ImportJSON => widgets::draw_import_json(f, size, app),
+        Screen::ImportPreview => widgets::draw_import_preview(f, size, app),
+        Screen::ExportCSV => widgets::draw_export_csv(f, size, app),
+        Screen::ExportJSON => widgets::draw_export_json(f, size, app),
+        Screen::ExportVault => widgets::draw_export_vault(f, size, app),
     }
 
     if app.context_menu_visible {

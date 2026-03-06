@@ -5,6 +5,7 @@ use std::path::PathBuf;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
     pub active_vault: String,
+    pub theme: String,
     pub auto_backup: bool,
     pub max_backups: usize,
     pub clipboard_timeout: u64,
@@ -15,6 +16,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             active_vault: String::from("personal"),
+            theme: String::from("GruvboxDark"),
             auto_backup: true,
             max_backups: 10,
             clipboard_timeout: 30,

@@ -191,7 +191,8 @@ pub fn draw_main_menu(f: &mut Frame, size: Rect, app: &mut App) {
         ("4", "Filter by Tags", "Sort entries"),
         ("5", "Generate Password", "Random secure"),
         ("6", "Delete Entry", "Remove password"),
-        ("7", "Exit", "Lock vault"),
+        ("7", "Import/Export", "Migrate data"),
+        ("8", "Exit", "Lock vault"),
     ];
 
     let menu_area = left_layout[2];

@@ -5,20 +5,20 @@ use std::fmt::Write;
 use std::fs;
 use std::path::PathBuf;
 
-pub type BackupInfo = Vec<(String, u64, String)>;
+type BackupInfo = Vec<(String, u64, String)>;
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
-/// Get the backup directory path
+/// Gets the backup directory path
 pub fn gback_dir() -> PathBuf {
     crate::config::get_passlock_dir().join("backups")
 }
 
-/// Get the vault specific backup directory
+/// Gets the vault specific backup directory
 pub fn gvback_dir(vault_name: &str) -> PathBuf {
     gback_dir().join(vault_name)
 }
 
-/// Init backup directory structure
+/// Initialize backup directory structure
 pub fn init_bsys() -> Result<()> {
     let backup_dir = gback_dir();
 
@@ -93,7 +93,7 @@ pub fn ls_backs(vault_name: &str) -> Result<BackupInfo> {
         let entry = entry?;
         let path = entry.path();
 
-        if path.extension().is_some_and(|s| s == "vault") {
+        if path.extension().and_then(|s| s.to_str()) == Some("vault") {
             let metadata = fs::metadata(&path)?;
             let filename = path.file_name().unwrap().to_string_lossy().to_string();
             let size = metadata.len();
@@ -147,7 +147,7 @@ pub fn restore_backup(vault_name: &str, back_fn: &str, password: &str) -> Result
     }
 }
 
-/// Clean old backs, reserving N recent backs
+/// Clean up old backups, keeping recent N backs
 fn clean_obs(vault_name: &str, max_backups: usize) -> Result<()> {
     let backups = ls_backs(vault_name)?;
 
@@ -185,8 +185,7 @@ pub fn export_vault(vault_name: &str, password: &str, output_path: &str) -> Resu
 }
 
 /// Import vault from external location
-#[allow(dead_code)]
-pub fn import_vault(vault_name: &str, password: &str, input_path: &str) -> Result<()> {
+pub fn _import_vault(vault_name: &str, password: &str, input_path: &str) -> Result<()> {
     let import_path = PathBuf::from(input_path);
 
     if !import_path.exists() {
@@ -232,6 +231,7 @@ pub fn export_csv(vault_name: &str, password: &str, output_path: &str) -> Result
         let password_val = esc_csv(&entry.p);
         let url = entry.url.as_ref().map_or(String::new(), |u| esc_csv(u));
         let notes = entry.nt.as_ref().map_or(String::new(), |n| esc_csv(n));
+        
         let tags = esc_csv(&entry.tags.join(";"));
         let totp = entry
             .totp_secret
@@ -627,6 +627,7 @@ pub fn preview_json_import(
     password: &str,
     input_path: &str,
 ) -> Result<ImportPreview> {
+    // Load current vault to check for duplicates
     let vault = storage::ld_vt(password)?;
 
     let json_content = fs::read_to_string(input_path)?;
@@ -774,7 +775,7 @@ pub fn import_csv_smart(
                 continue;
             } else if merge_duplicates {
                 let entry = &mut vault.e[existing_idx];
-                entry.p.clone_from(&password_val);
+                entry.p = password_val.clone();
 
                 if let Some(url) = fields.get(3).filter(|s| !s.is_empty()) {
                     entry.url = Some(url.clone());
@@ -866,7 +867,7 @@ pub fn export_csv_filtered(
                     && !e
                         .url
                         .as_ref()
-                        .is_some_and(|u| u.to_lowercase().contains(&query))
+                        .map_or(false, |u| u.to_lowercase().contains(&query))
                 {
                     return false;
                 }
@@ -888,6 +889,7 @@ pub fn export_csv_filtered(
         let password_val = esc_csv(&entry.p);
         let url = entry.url.as_ref().map_or(String::new(), |u| esc_csv(u));
         let notes = entry.nt.as_ref().map_or(String::new(), |n| esc_csv(n));
+        
         let tags = esc_csv(&entry.tags.join(";"));
         let totp = entry
             .totp_secret

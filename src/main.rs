@@ -9,8 +9,6 @@ mod vault_ffi;
 
 use models::Vault;
 use std::env;
-use std::io::Write;
-use std::path::Path;
 
 /// Generates a UUID string.
 ///
@@ -86,7 +84,7 @@ fn process_command(args: &[String], active_vault: &str) -> Result<(), Box<dyn st
         "import" => handle_import_cmd(&args[2..], active_vault),
         "export" => handle_export_cmd(&args[2..], active_vault),
         "info" => {
-            handle_info_cmd(&args[2..]);
+            handle_icmd(&args[2..]);
             Ok(())
         }
         "version" => {
@@ -113,216 +111,198 @@ fn handle_import_cmd(
     active_vault: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     if args.is_empty() {
-        print_import_help();
+        println!("Import Commands:");
+        println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        println!();
+        println!("Usage: passlock import <subcommand> [OPTIONS]");
+        println!();
+        println!("Subcommands:");
+        println!("  preview <file>                 Preview what will be imported");
+        println!("  csv <password> <file>          Import from CSV");
+        println!("  json <password> <file>         Import from JSON");
+        println!();
+        println!("Options:");
+        println!("  --skip-duplicates              Skip entries that already exist");
+        println!("  --merge-duplicates             Update existing entries with new data");
+        println!();
+        println!("Examples:");
+        println!("  passlock import preview passwords.csv");
+        println!("  passlock import csv myPass123 passwords.csv");
+        println!("  passlock import csv myPass123 passwords.csv --skip-duplicates");
+        println!("  passlock import csv myPass123 passwords.csv --merge-duplicates");
         return Ok(());
     }
 
     match args[0].as_str() {
-        "preview" => handle_import_preview(args, active_vault),
-        "csv" => handle_import_csv(args, active_vault),
-        "json" => handle_import_json(args, active_vault),
+        "preview" => {
+            if args.len() < 2 {
+                eprintln!("Usage: passlock import preview <file>");
+                eprintln!();
+                eprintln!("Preview a CSV or JSON file before importing");
+                eprintln!();
+                eprintln!("Example:");
+                eprintln!("  passlock import preview lastpass-export.csv");
+                std::process::exit(1);
+            }
+
+            let file_path = &args[1];
+
+            let is_csv = file_path.ends_with(".csv");
+            let is_json = file_path.ends_with(".json");
+
+            if !is_csv && !is_json {
+                return Err("File must be .csv or .json".into());
+            }
+
+            println!("[...] Analyzing file: {}", file_path);
+            println!();
+
+            println!("Enter vault password to check for duplicates:");
+            use std::io::Write;
+            std::io::stdout().flush()?;
+            let password = rpassword::read_password()?;
+
+            let preview = if is_csv {
+                backup::preview_csv_import(active_vault, &password, file_path)?
+            } else {
+                backup::preview_json_import(active_vault, &password, file_path)?
+            };
+
+            println!("Import Preview:");
+            println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            println!();
+            println!("Total entries in file:  {}", preview.total_entries);
+            println!("Valid entries:          {}", preview.valid_entries);
+            println!("Empty/invalid entries:  {}", preview.empty_entries);
+            println!("Duplicates found:       {}", preview.duplicates);
+            println!();
+
+            if !preview.errors.is_empty() {
+                println!("Errors:");
+                for error in &preview.errors {
+                    println!("  {}", error);
+                }
+                println!();
+            }
+
+            if preview.valid_entries > 0 {
+                println!("Sample entries (first 5):");
+                println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+                for (idx, entry) in preview.entries.iter().take(5).enumerate() {
+                    let dup_marker = if entry.is_duplicate {
+                        " [DUPLICATE]"
+                    } else {
+                        ""
+                    };
+                    let totp_marker = if entry.has_totp { " [2FA]" } else { "" };
+
+                    println!(
+                        "{}. {}{}{}",
+                        idx + 1,
+                        entry.name,
+                        dup_marker,
+                        totp_marker
+                    );
+                    println!("   Username: {}", entry.username);
+                    if let Some(ref url) = entry.url {
+                        println!("   URL: {}", url);
+                    }
+                    if !entry.tags.is_empty() {
+                        println!("   Tags: {}", entry.tags.join(", "));
+                    }
+                    println!();
+                }
+
+                if preview.entries.len() > 5 {
+                    println!("... and {} more entries", preview.entries.len() - 5);
+                    println!();
+                }
+            }
+
+            if preview.duplicates > 0 {
+                println!(
+                    "WARNING: {} duplicate entries found!",
+                    preview.duplicates
+                );
+                println!();
+                println!("Options for handling duplicates:");
+                println!("  --skip-duplicates      Skip duplicate entries (keep existing)");
+                println!("  --merge-duplicates     Update existing entries with new data");
+                println!();
+                println!("Example:");
+                println!(
+                    "  passlock import csv <password> {} --skip-duplicates",
+                    file_path
+                );
+            }
+
+            println!("To import this file:");
+            if is_csv {
+                println!("  passlock import csv <password> {}", file_path);
+            } else {
+                println!("  passlock import json <password> {}", file_path);
+            }
+        }
+        "csv" => {
+            if args.len() < 3 {
+                eprintln!("Usage: passlock import csv <password> <file> [OPTIONS]");
+                eprintln!();
+                eprintln!("Options:");
+                eprintln!("  --skip-duplicates      Skip entries that already exist");
+                eprintln!("  --merge-duplicates     Update existing entries");
+                eprintln!();
+                eprintln!("Example:");
+                eprintln!("  passlock import csv myPass123 passwords.csv --skip-duplicates");
+                std::process::exit(1);
+            }
+
+            let password = &args[1];
+            let file_path = &args[2];
+
+            let skip_duplicates = args.iter().any(|a| a == "--skip-duplicates");
+            let merge_duplicates = args.iter().any(|a| a == "--merge-duplicates");
+
+            if skip_duplicates && merge_duplicates {
+                return Err("Cannot use both --skip-duplicates and --merge-duplicates".into());
+            }
+
+            if skip_duplicates || merge_duplicates {
+                let (imported, skipped) = backup::import_csv_smart(
+                    active_vault,
+                    password,
+                    file_path,
+                    skip_duplicates,
+                    merge_duplicates,
+                )?;
+
+                println!("[✔] Import completed to vault '{}'", active_vault);
+                println!("[✔] Imported/Updated: {} entries", imported);
+                if skipped > 0 {
+                    println!("[!] Skipped: {} entries", skipped);
+                }
+            } else {
+                backup::import_csv(active_vault, password, file_path)?;
+            }
+        }
+        "json" => {
+            if args.len() < 3 {
+                eprintln!("Usage: passlock import json <password> <file>");
+                std::process::exit(1);
+            }
+
+            let password = &args[1];
+            let file_path = &args[2];
+
+            backup::import_json(active_vault, password, file_path)?;
+        }
         _ => {
             println!("Unknown import subcommand: {}", args[0]);
             println!();
             println!("Available subcommands: preview, csv, json");
-            Ok(())
-        }
-    }
-}
-
-fn print_import_help() {
-    println!("Import Commands:");
-    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    println!();
-    println!("Usage: passlock import <subcommand> [OPTIONS]");
-    println!();
-    println!("Subcommands:");
-    println!("  preview <file>                 Preview what will be imported");
-    println!("  csv <password> <file>          Import from CSV");
-    println!("  json <password> <file>         Import from JSON");
-    println!();
-    println!("Options:");
-    println!("  --skip-duplicates              Skip entries that already exist");
-    println!("  --merge-duplicates             Update existing entries with new data");
-    println!();
-    println!("Examples:");
-    println!("  passlock import preview passwords.csv");
-    println!("  passlock import csv myPass123 passwords.csv");
-    println!("  passlock import csv myPass123 passwords.csv --skip-duplicates");
-    println!("  passlock import csv myPass123 passwords.csv --merge-duplicates");
-}
-
-fn handle_import_preview(
-    args: &[String],
-    active_vault: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    if args.len() < 2 {
-        eprintln!("Usage: passlock import preview <file>");
-        eprintln!();
-        eprintln!("Preview a CSV or JSON file before importing");
-        eprintln!();
-        eprintln!("Example:");
-        eprintln!("  passlock import preview lastpass-export.csv");
-        std::process::exit(1);
-    }
-
-    let file_path = &args[1];
-    let path = Path::new(file_path);
-
-    let is_csv = path
-        .extension()
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("csv"));
-    let is_json = path
-        .extension()
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("json"));
-
-    if !is_csv && !is_json {
-        return Err("File must be .csv or .json".into());
-    }
-
-    println!("[...] Analyzing file: {file_path}");
-    println!();
-
-    println!("Enter vault password to check for duplicates:");
-    std::io::stdout().flush()?;
-    let password = rpassword::read_password()?;
-
-    let preview = if is_csv {
-        backup::preview_csv_import(active_vault, &password, file_path)?
-    } else {
-        backup::preview_json_import(active_vault, &password, file_path)?
-    };
-
-    display_import_preview(&preview, file_path, is_csv);
-    Ok(())
-}
-
-fn display_import_preview(preview: &backup::ImportPreview, file_path: &str, is_csv: bool) {
-    println!("Import Preview:");
-    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    println!();
-    println!("Total entries in file:  {}", preview.total_entries);
-    println!("Valid entries:          {}", preview.valid_entries);
-    println!("Empty/invalid entries:  {}", preview.empty_entries);
-    println!("Duplicates found:       {}", preview.duplicates);
-    println!();
-
-    if !preview.errors.is_empty() {
-        println!("Errors:");
-        for error in &preview.errors {
-            println!("  {error}");
-        }
-        println!();
-    }
-
-    if preview.valid_entries > 0 {
-        println!("Sample entries (first 5):");
-        println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-
-        for (idx, entry) in preview.entries.iter().take(5).enumerate() {
-            let dup_marker = if entry.is_duplicate {
-                " [DUPLICATE]"
-            } else {
-                ""
-            };
-            let totp_marker = if entry.has_totp { " [2FA]" } else { "" };
-
-            println!("{}. {}{}{}", idx + 1, entry.name, dup_marker, totp_marker);
-            println!("   Username: {}", entry.username);
-            if let Some(ref url) = entry.url {
-                println!("   URL: {url}");
-            }
-            if !entry.tags.is_empty() {
-                println!("   Tags: {}", entry.tags.join(", "));
-            }
-            println!();
-        }
-
-        if preview.entries.len() > 5 {
-            println!("... and {} more entries", preview.entries.len() - 5);
-            println!();
         }
     }
 
-    if preview.duplicates > 0 {
-        println!("WARNING: {} duplicate entries found!", preview.duplicates);
-        println!();
-        println!("Options for handling duplicates:");
-        println!("  --skip-duplicates      Skip duplicate entries (keep existing)");
-        println!("  --merge-duplicates     Update existing entries with new data");
-        println!();
-        println!("Example:");
-        println!("  passlock import csv <password> {file_path} --skip-duplicates");
-    }
-
-    println!("To import this file:");
-    if is_csv {
-        println!("  passlock import csv <password> {file_path}");
-    } else {
-        println!("  passlock import json <password> {file_path}");
-    }
-}
-
-fn handle_import_csv(
-    args: &[String],
-    active_vault: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    if args.len() < 3 {
-        eprintln!("Usage: passlock import csv <password> <file> [OPTIONS]");
-        eprintln!();
-        eprintln!("Options:");
-        eprintln!("  --skip-duplicates      Skip entries that already exist");
-        eprintln!("  --merge-duplicates     Update existing entries");
-        eprintln!();
-        eprintln!("Example:");
-        eprintln!("  passlock import csv myPass123 passwords.csv --skip-duplicates");
-        std::process::exit(1);
-    }
-
-    let password = &args[1];
-    let file_path = &args[2];
-
-    let skip_duplicates = args.iter().any(|a| a == "--skip-duplicates");
-    let merge_duplicates = args.iter().any(|a| a == "--merge-duplicates");
-
-    if skip_duplicates && merge_duplicates {
-        return Err("Cannot use both --skip-duplicates and --merge-duplicates".into());
-    }
-
-    if skip_duplicates || merge_duplicates {
-        let (imported, skipped) = backup::import_csv_smart(
-            active_vault,
-            password,
-            file_path,
-            skip_duplicates,
-            merge_duplicates,
-        )?;
-
-        println!("[✔] Import completed to vault '{active_vault}'");
-        println!("[✔] Imported/Updated: {imported} entries");
-        if skipped > 0 {
-            println!("[!] Skipped: {skipped} entries");
-        }
-    } else {
-        backup::import_csv(active_vault, password, file_path)?;
-    }
-
-    Ok(())
-}
-
-fn handle_import_json(
-    args: &[String],
-    active_vault: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    if args.len() < 3 {
-        eprintln!("Usage: passlock import json <password> <file>");
-        std::process::exit(1);
-    }
-
-    let password = &args[1];
-    let file_path = &args[2];
-
-    backup::import_json(active_vault, password, file_path)?;
     Ok(())
 }
 
@@ -332,199 +312,116 @@ fn handle_export_cmd(
     active_vault: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     if args.is_empty() {
-        print_export_help();
+        println!("Export Commands:");
+        println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        println!();
+        println!("Usage: passlock export <subcommand> [OPTIONS]");
+        println!();
+        println!("Subcommands:");
+        println!("  vault <password> <file>        Export encrypted vault");
+        println!("  csv <password> <file>          Export to CSV (PLAINTEXT)");
+        println!("  json <password> <file>         Export to JSON (PLAINTEXT)");
+        println!();
+        println!("Options for CSV/JSON export:");
+        println!("  --tag <tag>                    Export only entries with this tag");
+        println!("  --search <query>               Export only entries matching search");
+        println!();
+        println!("Examples:");
+        println!("  passlock export vault myPass123 backup.vault");
+        println!("  passlock export csv myPass123 all-passwords.csv");
+        println!("  passlock export csv myPass123 work.csv --tag work");
+        println!("  passlock export csv myPass123 google.csv --search google");
         return Ok(());
     }
 
     match args[0].as_str() {
-        "vault" => handle_export_vault(args, active_vault),
-        "csv" => handle_export_csv(args, active_vault),
-        "json" => handle_export_json(args, active_vault),
+        "vault" => {
+            if args.len() < 3 {
+                eprintln!("Usage: passlock export vault <password> <file>");
+                std::process::exit(1);
+            }
+
+            let password = &args[1];
+            let file_path = &args[2];
+
+            backup::export_vault(active_vault, password, file_path)?;
+        }
+        "csv" => {
+            if args.len() < 3 {
+                eprintln!("Usage: passlock export csv <password> <file> [OPTIONS]");
+                eprintln!();
+                eprintln!("Options:");
+                eprintln!("  --tag <tag>        Export only entries with this tag");
+                eprintln!("  --search <query>   Export only entries matching search");
+                eprintln!();
+                eprintln!("Examples:");
+                eprintln!("  passlock export csv myPass123 passwords.csv");
+                eprintln!("  passlock export csv myPass123 work.csv --tag work");
+                std::process::exit(1);
+            }
+
+            let password = &args[1];
+            let file_path = &args[2];
+
+            let mut filter_tag = None;
+            let mut filter_search = None;
+
+            let mut i = 3;
+            while i < args.len() {
+                match args[i].as_str() {
+                    "--tag" => {
+                        if i + 1 < args.len() {
+                            filter_tag = Some(args[i + 1].as_str());
+                            i += 2;
+                        } else {
+                            return Err("--tag requires a value".into());
+                        }
+                    }
+                    "--search" => {
+                        if i + 1 < args.len() {
+                            filter_search = Some(args[i + 1].as_str());
+                            i += 2;
+                        } else {
+                            return Err("--search requires a value".into());
+                        }
+                    }
+                    _ => {
+                        i += 1;
+                    }
+                }
+            }
+
+            if filter_tag.is_some() || filter_search.is_some() {
+                backup::export_csv_filtered(
+                    active_vault,
+                    password,
+                    file_path,
+                    filter_tag,
+                    filter_search,
+                )?;
+            } else {
+                backup::export_csv(active_vault, password, file_path)?;
+            }
+        }
+        "json" => {
+            if args.len() < 3 {
+                eprintln!("Usage: passlock export json <password> <file>");
+                std::process::exit(1);
+            }
+
+            let password = &args[1];
+            let file_path = &args[2];
+
+            backup::export_json(active_vault, password, file_path)?;
+        }
         _ => {
             println!("Unknown export subcommand: {}", args[0]);
             println!();
             println!("Available subcommands: vault, csv, json");
-            Ok(())
-        }
-    }
-}
-
-fn print_export_help() {
-    println!("Export Commands:");
-    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    println!();
-    println!("Usage: passlock export <subcommand> [OPTIONS]");
-    println!();
-    println!("Subcommands:");
-    println!("  vault <password> <file>        Export encrypted vault");
-    println!("  csv <password> <file>          Export to CSV (PLAINTEXT)");
-    println!("  json <password> <file>         Export to JSON (PLAINTEXT)");
-    println!();
-    println!("Options for CSV/JSON export:");
-    println!("  --tag <tag>                    Export only entries with this tag");
-    println!("  --search <query>               Export only entries matching search");
-    println!();
-    println!("Examples:");
-    println!("  passlock export vault myPass123 backup.vault");
-    println!("  passlock export csv myPass123 all-passwords.csv");
-    println!("  passlock export csv myPass123 work.csv --tag work");
-    println!("  passlock export csv myPass123 google.csv --search google");
-}
-
-fn handle_export_vault(
-    args: &[String],
-    active_vault: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    if args.len() < 3 {
-        eprintln!("Usage: passlock export vault <password> <file>");
-        std::process::exit(1);
-    }
-
-    let password = &args[1];
-    let file_path = &args[2];
-
-    backup::export_vault(active_vault, password, file_path)?;
-    Ok(())
-}
-
-fn handle_export_csv(
-    args: &[String],
-    active_vault: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    if args.len() < 3 {
-        eprintln!("Usage: passlock export csv <password> <file> [OPTIONS]");
-        eprintln!();
-        eprintln!("Options:");
-        eprintln!("  --tag <tag>        Export only entries with this tag");
-        eprintln!("  --search <query>   Export only entries matching search");
-        eprintln!();
-        eprintln!("Examples:");
-        eprintln!("  passlock export csv myPass123 passwords.csv");
-        eprintln!("  passlock export csv myPass123 work.csv --tag work");
-        std::process::exit(1);
-    }
-
-    let password = &args[1];
-    let file_path = &args[2];
-
-    let (filter_tag, filter_search) = parse_export_filters(&args[3..]);
-
-    if filter_tag.is_some() || filter_search.is_some() {
-        backup::export_csv_filtered(active_vault, password, file_path, filter_tag, filter_search)?;
-    } else {
-        backup::export_csv(active_vault, password, file_path)?;
-    }
-
-    Ok(())
-}
-
-fn handle_export_json(
-    args: &[String],
-    active_vault: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    if args.len() < 3 {
-        eprintln!("Usage: passlock export json <password> <file>");
-        std::process::exit(1);
-    }
-
-    let password = &args[1];
-    let file_path = &args[2];
-
-    backup::export_json(active_vault, password, file_path)?;
-    Ok(())
-}
-
-fn parse_export_filters(args: &[String]) -> (Option<&str>, Option<&str>) {
-    let mut filter_tag = None;
-    let mut filter_search = None;
-    let mut i = 0;
-
-    while i < args.len() {
-        match args[i].as_str() {
-            "--tag" if i + 1 < args.len() => {
-                filter_tag = Some(args[i + 1].as_str());
-                i += 2;
-            }
-            "--search" if i + 1 < args.len() => {
-                filter_search = Some(args[i + 1].as_str());
-                i += 2;
-            }
-            _ => {
-                i += 1;
-            }
         }
     }
 
-    (filter_tag, filter_search)
-}
-
-/// Handle info command
-fn handle_info_cmd(args: &[String]) {
-    if args.is_empty() || args[0] == "cpu" {
-        print_system_info();
-    } else {
-        println!("Unknown info command: {}", args[0]);
-        println!("Available: info, info cpu");
-    }
-}
-
-/// Print system information
-fn print_system_info() {
-    println!("PassLock System Information");
-    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    println!();
-
-    println!("CPU Features:");
-    let has_aes_ni = vault_ffi::aes_sup();
-
-    if has_aes_ni {
-        println!("  AES-NI: Supported");
-        println!("     (Hardware-accelerated AES encryption available)");
-    } else {
-        println!("  AES-NI: Not supported");
-        println!("     (Using ChaCha20-Poly1305 for optimal performance)");
-    }
-    println!();
-
-    println!("Recommended Cipher:");
-    println!("  {}", vault_ffi::get_cipher());
-    println!();
-
-    print_vault_status();
-    println!();
-    println!("Version: PassLock v{}", env!("CARGO_PKG_VERSION"));
-}
-
-/// Print vault status
-fn print_vault_status() {
-    if storage::vt_exi() {
-        println!("Vault Status:");
-        println!("  Vault exists at: ~/.passlock.vault");
-
-        if let Some(home) = dirs::home_dir() {
-            let vault_path = home.join(".passlock.vault");
-            if let Ok(metadata) = std::fs::metadata(&vault_path) {
-                let size_kb = metadata.len() / 1024;
-                if size_kb > 0 {
-                    println!("  Size: {size_kb} KB");
-                } else {
-                    println!("  Size: {} bytes", metadata.len());
-                }
-            }
-        }
-
-        let cfg = config::load_config().unwrap_or_default();
-        let backups = backup::ls_backs(&cfg.active_vault).unwrap_or_else(|_| Vec::new());
-        println!(
-            "  Backups: {} available (vault: {})",
-            backups.len(),
-            cfg.active_vault
-        );
-    } else {
-        println!("Vault Status:");
-        println!("  No vault found");
-        println!("  Create one with: passlock create <password>");
-    }
+    Ok(())
 }
 
 /// Unlock vault command
@@ -558,7 +455,7 @@ fn sync_vault(password: &str) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/// Backup vault after TUI closes
+/// Automatically backup vault after TUI closes
 /// Called by TUI when exiting
 /// Only creates backup if vault was modified
 ///
@@ -653,32 +550,28 @@ fn handle_backup_list() -> Result<(), Box<dyn std::error::Error>> {
         println!("Create your first backup with:");
         println!("  passlock backup create <password>");
     } else {
-        display_backup_list(&cfg.active_vault, &backups);
+        println!("Available Backups for vault '{}':", cfg.active_vault);
+        println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        println!();
+        println!("{:<40} {:<12} Created", "Filename", "Size");
+        println!("{}", "─".repeat(70));
+
+        for (filename, size, created) in &backups {
+            let size_kb = if *size > 1024 {
+                format!("{} KB", *size / 1024)
+            } else {
+                format!("{} bytes", *size)
+            };
+            println!("{filename:<40} {size_kb:<12} {created}");
+        }
+
+        println!();
+        println!("Total backups: {}", backups.len());
+        println!();
+        println!("Restore a backup with:");
+        println!("  passlock backup restore <backup-name> <password>");
     }
     Ok(())
-}
-
-fn display_backup_list(vault_name: &str, backups: &backup::BackupInfo) {
-    println!("Available Backups for vault '{vault_name}':");
-    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    println!();
-    println!("{:<40} {:<12} Created", "Filename", "Size");
-    println!("{}", "─".repeat(70));
-
-    for (filename, size, created) in backups {
-        let size_kb = if *size > 1024 {
-            format!("{} KB", *size / 1024)
-        } else {
-            format!("{} bytes", *size)
-        };
-        println!("{filename:<40} {size_kb:<12} {created}");
-    }
-
-    println!();
-    println!("Total backups: {}", backups.len());
-    println!();
-    println!("Restore a backup with:");
-    println!("  passlock backup restore <backup-name> <password>");
 }
 
 /// Handle backup restore subcommand
@@ -828,25 +721,21 @@ fn handle_vault_list() -> Result<(), Box<dyn std::error::Error>> {
         println!("Create your first vault with:");
         println!("  passlock vault create <name> <password>");
     } else {
-        display_vault_list(&vaults, &cfg.active_vault);
+        println!("Available Vaults:");
+        println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        println!();
+        for vault_name in vaults {
+            let marker = if vault_name == cfg.active_vault {
+                " (active)"
+            } else {
+                ""
+            };
+            println!("  • {vault_name}{marker}");
+        }
+        println!();
+        println!("Switch vault with: passlock vault use <name>");
     }
     Ok(())
-}
-
-fn display_vault_list(vaults: &[String], active_vault: &str) {
-    println!("Available Vaults:");
-    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    println!();
-    for vault_name in vaults {
-        let marker = if vault_name == active_vault {
-            " (active)"
-        } else {
-            ""
-        };
-        println!("  • {vault_name}{marker}");
-    }
-    println!();
-    println!("Switch vault with: passlock vault use <name>");
 }
 
 /// Handle vault use subcommand
@@ -884,11 +773,6 @@ fn handle_vault_info() -> Result<(), Box<dyn std::error::Error>> {
     println!("Total vaults: {}", vaults.len());
     println!();
 
-    display_vault_details(&cfg);
-    Ok(())
-}
-
-fn display_vault_details(cfg: &config::Config) {
     if config::vault_exists(&cfg.active_vault) {
         let vault_path = config::get_vault_path(&cfg.active_vault);
         if let Ok(metadata) = std::fs::metadata(&vault_path) {
@@ -912,6 +796,7 @@ fn display_vault_details(cfg: &config::Config) {
     println!("  Max backups: {}", cfg.max_backups);
     println!("  Clipboard timeout: {}s", cfg.clipboard_timeout);
     println!("  Refresh rate: {}ms", cfg.refresh_rate);
+    Ok(())
 }
 
 /// Handle vault delete subcommand
@@ -944,40 +829,32 @@ fn handle_vault_delete(args: &[String]) -> Result<(), Box<dyn std::error::Error>
 
     if line.trim().to_lowercase() == "y" {
         config::delete_vault(vault_name)?;
-        handle_post_delete(is_active, vault_name, &mut cfg)?;
-    } else {
-        println!("[!] Deletion cancelled");
-    }
-    Ok(())
-}
 
-fn handle_post_delete(
-    is_active: bool,
-    vault_name: &str,
-    cfg: &mut config::Config,
-) -> Result<(), Box<dyn std::error::Error>> {
-    if is_active {
-        let remaining_vaults = config::list_vaults()?;
+        if is_active {
+            let remaining_vaults = config::list_vaults()?;
 
-        if remaining_vaults.is_empty() {
-            cfg.active_vault.clear();
-            config::save_config(cfg)?;
-            println!("[✔] Vault deleted successfully");
-            println!("[i] No vaults remaining. Create a new vault with:");
-            println!("    passlock vault create <name> <password>");
-        } else {
-            cfg.active_vault.clear();
-            config::save_config(cfg)?;
-            println!("[✔] Vault deleted successfully");
-            println!("[i] No active vault selected. Available vaults:");
-            for v in &remaining_vaults {
-                println!("    • {v}");
+            if remaining_vaults.is_empty() {
+                cfg.active_vault.clear();
+                config::save_config(&cfg)?;
+                println!("[✔] Vault deleted successfully");
+                println!("[i] No vaults remaining. Create a new vault with:");
+                println!("    passlock vault create <name> <password>");
+            } else {
+                cfg.active_vault.clear();
+                config::save_config(&cfg)?;
+                println!("[✔] Vault deleted successfully");
+                println!("[i] No active vault selected. Available vaults:");
+                for v in &remaining_vaults {
+                    println!("    • {v}");
+                }
+                println!();
+                println!("Set active vault with: passlock vault use <name>");
             }
-            println!();
-            println!("Set active vault with: passlock vault use <name>");
+        } else {
+            println!("[✔] Vault '{vault_name}' deleted successfully");
         }
     } else {
-        println!("[✔] Vault '{vault_name}' deleted successfully");
+        println!("[!] Deletion cancelled");
     }
     Ok(())
 }
@@ -1004,8 +881,80 @@ fn handle_vault_rename(args: &[String]) -> Result<(), Box<dyn std::error::Error>
     Ok(())
 }
 
+/// Handle info command
+fn handle_icmd(args: &[String]) {
+    if args.is_empty() || args[0] == "cpu" {
+        print_system_info();
+    } else {
+        println!("Unknown info command: {}", args[0]);
+        println!("Available: info, info cpu");
+    }
+}
+
+/// Print system information
+fn print_system_info() {
+    println!("PassLock System Information");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!();
+
+    println!("CPU Features:");
+    let has_aes_ni = vault_ffi::aes_sup();
+
+    if has_aes_ni {
+        println!("  AES-NI: Supported");
+        println!("     (Hardware-accelerated AES encryption available)");
+    } else {
+        println!("  AES-NI: Not supported");
+        println!("     (Using ChaCha20-Poly1305 for optimal performance)");
+    }
+    println!();
+
+    println!("Recommended Cipher:");
+    println!("  {}", vault_ffi::get_cipher());
+    println!();
+
+    print_vault_status();
+    println!();
+    println!("Version: PassLock v{}", env!("CARGO_PKG_VERSION"));
+}
+
+/// Print vault status
+fn print_vault_status() {
+    if storage::vt_exi() {
+        println!("Vault Status:");
+        println!("  Vault exists at: ~/.passlock.vault");
+
+        if let Some(home) = dirs::home_dir() {
+            let vault_path = home.join(".passlock.vault");
+            if let Ok(metadata) = std::fs::metadata(&vault_path) {
+                let size_kb = metadata.len() / 1024;
+                if size_kb > 0 {
+                    println!("  Size: {size_kb} KB");
+                } else {
+                    println!("  Size: {} bytes", metadata.len());
+                }
+            }
+        }
+
+        let cfg = config::load_config().unwrap_or_default();
+        let backups = backup::ls_backs(&cfg.active_vault).unwrap_or_else(|_| Vec::new());
+        println!(
+            "  Backups: {} available (vault: {})",
+            backups.len(),
+            cfg.active_vault
+        );
+    } else {
+        println!("Vault Status:");
+        println!("  No vault found");
+        println!("  Create one with: passlock create <password>");
+    }
+}
+
 fn print_usage() {
-    println!("PassLock v{}", env!("CARGO_PKG_VERSION"));
+    println!(
+        "PassLock v{} - Secure Password Manager",
+        env!("CARGO_PKG_VERSION")
+    );
     println!();
     println!("USAGE:");
     println!("  passlock <COMMAND> [OPTIONS]");
@@ -1016,7 +965,7 @@ fn print_usage() {
     println!("  tui                              Launch TUI interface");
     println!();
     println!("VAULT MANAGEMENT:");
-    println!("  vault create <name> <password>   Create new vault");
+    println!("  vault create <name> <password>       Create new vault");
     println!("  vault list                       List all vaults");
     println!("  vault use <name>                 Set active vault");
     println!("  vault info                       Show vault info");
