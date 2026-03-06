@@ -147,7 +147,7 @@ pub fn restore_backup(vault_name: &str, back_fn: &str, password: &str) -> Result
     }
 }
 
-/// Clean up old backups, keeping recent N backs
+/// Clean old backs, reserving N recent backs
 fn clean_obs(vault_name: &str, max_backups: usize) -> Result<()> {
     let backups = ls_backs(vault_name)?;
 

@@ -1005,10 +1005,7 @@ fn handle_vault_rename(args: &[String]) -> Result<(), Box<dyn std::error::Error>
 }
 
 fn print_usage() {
-    println!(
-        "PassLock v{} - Secure Password Manager",
-        env!("CARGO_PKG_VERSION")
-    );
+    println!("PassLock v{}", env!("CARGO_PKG_VERSION"));
     println!();
     println!("USAGE:");
     println!("  passlock <COMMAND> [OPTIONS]");
@@ -1019,7 +1016,7 @@ fn print_usage() {
     println!("  tui                              Launch TUI interface");
     println!();
     println!("VAULT MANAGEMENT:");
-    println!("  vault create <name> <password>       Create new vault");
+    println!("  vault create <name> <password>   Create new vault");
     println!("  vault list                       List all vaults");
     println!("  vault use <name>                 Set active vault");
     println!("  vault info                       Show vault info");
