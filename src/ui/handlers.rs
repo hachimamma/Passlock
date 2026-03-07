@@ -934,16 +934,20 @@ pub fn handle_export_csv(app: &mut App, key: KeyCode) {
             app.msg.clear();
         }
         KeyCode::Up => {
-            if app.export_file_path.is_empty() && app.export_filter_value.is_empty()
-                && app.export_filter_type > 0 {
-                    app.export_filter_type -= 1;
-                }
+            if app.export_file_path.is_empty()
+                && app.export_filter_value.is_empty()
+                && app.export_filter_type > 0
+            {
+                app.export_filter_type -= 1;
+            }
         }
         KeyCode::Down => {
-            if app.export_file_path.is_empty() && app.export_filter_value.is_empty()
-                && app.export_filter_type < 2 {
-                    app.export_filter_type += 1;
-                }
+            if app.export_file_path.is_empty()
+                && app.export_filter_value.is_empty()
+                && app.export_filter_type < 2
+            {
+                app.export_filter_type += 1;
+            }
         }
         KeyCode::Char(c) => {
             if app.export_filter_type > 0
