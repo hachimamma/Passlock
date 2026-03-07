@@ -81,13 +81,13 @@ pub fn load_config() -> Result<Config, Box<dyn std::error::Error>> {
     if config_path.exists() {
         let config_str = fs::read_to_string(&config_path)?;
         let config: Config = serde_json::from_str(&config_str)?;
-        
+
         let needs_update = !config_str.contains("\"theme\"");
-        
+
         if needs_update {
             save_config(&config)?;
         }
-        
+
         Ok(config)
     } else {
         let config = Config::default();

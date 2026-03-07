@@ -948,7 +948,10 @@ pub fn handle_export_csv(app: &mut App, key: KeyCode) {
             }
         }
         KeyCode::Char(c) => {
-            if app.export_filter_type > 0 && app.export_filter_value.is_empty() && app.export_file_path.is_empty() {
+            if app.export_filter_type > 0
+                && app.export_filter_value.is_empty()
+                && app.export_file_path.is_empty()
+            {
                 app.export_filter_value.push(c);
             } else {
                 app.export_file_path.push(c);
@@ -966,7 +969,7 @@ pub fn handle_export_csv(app: &mut App, key: KeyCode) {
                 app.set_msg("Please enter output file path", MessageType::Error);
                 return;
             }
-            
+
             if app.export_filter_type > 0 && app.export_filter_value.is_empty() {
                 app.set_msg("Please enter filter value", MessageType::Error);
                 return;
