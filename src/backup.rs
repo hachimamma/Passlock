@@ -229,8 +229,6 @@ pub fn export_csv(_vault_name: &str, password: &str, output_path: &str) -> Resul
 
     fs::write(output_path, csv_content)?;
 
-    // Silent - TUI/CLI handlers show success messages
-
     Ok(())
 }
 
@@ -269,8 +267,6 @@ pub fn export_json(vault_name: &str, password: &str, output_path: &str) -> Resul
 
     let json_string = serde_json::to_string_pretty(&json_output)?;
     fs::write(output_path, json_string)?;
-
-    // Silent - TUI/CLI handlers show success messages
 
     Ok(())
 }
@@ -334,8 +330,6 @@ pub fn import_csv(vault_name: &str, password: &str, input_path: &str) -> Result<
     }
 
     storage::svv(&vault, password)?;
-
-    // Silent - TUI/CLI handlers show success messages
 
     let config = crate::config::load_config()?;
     if config.auto_backup {
