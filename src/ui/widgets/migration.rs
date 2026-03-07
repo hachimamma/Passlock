@@ -10,6 +10,7 @@ use ratatui::{
     Frame,
 };
 
+#[allow(clippy::too_many_lines)]
 pub fn draw_import_export_menu(f: &mut Frame, size: Rect, app: &App) {
     let area = centered_rect(70, 75, size);
 
@@ -48,10 +49,8 @@ pub fn draw_import_export_menu(f: &mut Frame, size: Rect, app: &App) {
         .alignment(Alignment::Center);
     f.render_widget(title, chunks[0]);
 
-    let import_items = vec![
-        ("1", "Import from CSV", "Import passwords from CSV file"),
-        ("2", "Import from JSON", "Import passwords from JSON file"),
-    ];
+    let import_items = [("1", "Import from CSV", "Import passwords from CSV file"),
+        ("2", "Import from JSON", "Import passwords from JSON file")];
 
     let import_lines: Vec<Line> = std::iter::once(Line::from(vec![Span::styled(
         "IMPORT:",
@@ -92,12 +91,10 @@ pub fn draw_import_export_menu(f: &mut Frame, size: Rect, app: &App) {
     );
     f.render_widget(import_widget, chunks[2]);
 
-    let export_items = vec![
-        ("3", "Export to CSV (All)", "Export all passwords to CSV"),
+    let export_items = [("3", "Export to CSV (All)", "Export all passwords to CSV"),
         ("4", "Export to CSV (Filtered)", "Export filtered passwords"),
         ("5", "Export to JSON", "Export to JSON format"),
-        ("6", "Export Encrypted Vault", "Export encrypted backup"),
-    ];
+        ("6", "Export Encrypted Vault", "Export encrypted backup")];
 
     let export_lines: Vec<Line> = std::iter::once(Line::from(vec![Span::styled(
         "EXPORT:",
@@ -476,11 +473,9 @@ pub fn draw_import_preview(f: &mut Frame, size: Rect, app: &App) {
         );
         f.render_widget(sample, chunks[2]);
 
-        let dup_options = vec![
-            ("Import all (create duplicates)", 0),
+        let dup_options = [("Import all (create duplicates)", 0),
             ("Skip duplicates (keep existing)", 1),
-            ("Merge/update duplicates", 2),
-        ];
+            ("Merge/update duplicates", 2)];
 
         let dup_lines: Vec<Line> = std::iter::once(Line::from(vec![Span::styled(
             "Duplicate handling:",
@@ -531,6 +526,7 @@ pub fn draw_import_preview(f: &mut Frame, size: Rect, app: &App) {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 pub fn draw_export_csv(f: &mut Frame, size: Rect, app: &App) {
     let area = centered_rect(75, 75, size);
 
@@ -573,11 +569,9 @@ pub fn draw_export_csv(f: &mut Frame, size: Rect, app: &App) {
         .alignment(Alignment::Center);
     f.render_widget(title, chunks[0]);
 
-    let filter_options = vec![
-        ("All entries", 0),
+    let filter_options = [("All entries", 0),
         ("Filter by tag", 1),
-        ("Filter by search", 2),
-    ];
+        ("Filter by search", 2)];
 
     let filter_lines: Vec<Line> = std::iter::once(Line::from(vec![Span::styled(
         "Filter by:",
@@ -621,7 +615,7 @@ pub fn draw_export_csv(f: &mut Frame, size: Rect, app: &App) {
         };
 
         let filter_value_text = if app.export_filter_value.is_empty() {
-            format!("{}_", filter_label)
+            format!("{filter_label}_")
         } else {
             format!("{}{}", filter_label, app.export_filter_value)
         };
