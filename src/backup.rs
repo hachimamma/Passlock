@@ -24,7 +24,6 @@ pub fn init_bsys() -> Result<()> {
 
     if !backup_dir.exists() {
         fs::create_dir_all(&backup_dir)?;
-        println!("[✔] Created backup directory: {}", backup_dir.display());
     }
 
     Ok(())
@@ -55,7 +54,6 @@ pub fn create_backup(vault_name: &str, max_backups: usize, force: bool) -> Resul
                 let backup_meta = fs::metadata(&lb_path)?;
 
                 if vault_meta.len() == backup_meta.len() {
-                    println!("[✔] Backup skipped (no changes detected)");
                     return Ok((last_back.0.clone(), false));
                 }
             }
@@ -71,8 +69,6 @@ pub fn create_backup(vault_name: &str, max_backups: usize, force: bool) -> Resul
     let backup_path = backup_dir.join(&back_fn);
 
     fs::copy(&vault_path, &backup_path)?;
-
-    println!("[✔] Backup created: {back_fn}");
 
     clean_obs(vault_name, max_backups)?;
 
@@ -120,8 +116,6 @@ pub fn restore_backup(vault_name: &str, back_fn: &str, password: &str) -> Result
         return Err(format!("Backup file not found: {back_fn}").into());
     }
 
-    println!("[...] Verifying backup with password...");
-
     let vault_path = crate::config::get_vault_path(vault_name);
     let temp_path = crate::config::get_passlock_dir().join(format!("{vault_name}.temp"));
 
@@ -134,11 +128,9 @@ pub fn restore_backup(vault_name: &str, back_fn: &str, password: &str) -> Result
             let safety_backup =
                 crate::config::get_passlock_dir().join(format!("{vault_name}.before_restore"));
             fs::copy(&vault_path, &safety_backup)?;
-            println!("[✔] Current vault backed up to: {vault_name}.before_restore");
         }
 
         fs::copy(&backup_path, &vault_path)?;
-        println!("[✔] Vault '{vault_name}' restored from: {back_fn}");
 
         Ok(())
     } else {
@@ -158,7 +150,6 @@ fn clean_obs(vault_name: &str, max_backups: usize) -> Result<()> {
         for (filename, _, _) in to_delete {
             let backup_path = backup_dir.join(filename);
             fs::remove_file(&backup_path)?;
-            println!("[✔] Removed old backup: {filename}");
         }
     }
 
@@ -177,10 +168,6 @@ pub fn export_vault(vault_name: &str, password: &str, output_path: &str) -> Resu
 
     fs::copy(&vault_path, output_path)?;
 
-    println!("[✔] Vault '{vault_name}' exported to: {output_path}");
-    println!("[✔] Format: Encrypted PassLock vault");
-    println!("[!] Keep this file secure.");
-
     Ok(())
 }
 
@@ -197,8 +184,6 @@ pub fn _import_vault(vault_name: &str, password: &str, input_path: &str) -> Resu
 
     fs::copy(&import_path, &temp_path)?;
 
-    println!("[...] Verifying import file...");
-
     if storage::ld_vt(password).is_ok() {
         fs::remove_file(&temp_path)?;
 
@@ -206,11 +191,9 @@ pub fn _import_vault(vault_name: &str, password: &str, input_path: &str) -> Resu
             let safety_backup =
                 crate::config::get_passlock_dir().join(format!("{vault_name}.before_import"));
             fs::copy(&vault_path, &safety_backup)?;
-            println!("[✔] Current vault backed up: {vault_name}.before_import");
         }
 
         fs::copy(&import_path, &vault_path)?;
-        println!("[✔] Vault '{vault_name}' imported from: {input_path}");
 
         Ok(())
     } else {
@@ -220,7 +203,7 @@ pub fn _import_vault(vault_name: &str, password: &str, input_path: &str) -> Resu
 }
 
 /// Export to CSV
-pub fn export_csv(vault_name: &str, password: &str, output_path: &str) -> Result<()> {
+pub fn export_csv(_vault_name: &str, password: &str, output_path: &str) -> Result<()> {
     let vault = storage::ld_vt(password)?;
 
     let mut csv_content = String::from("name,username,password,url,notes,tags,2fa_secret\n");
@@ -246,9 +229,7 @@ pub fn export_csv(vault_name: &str, password: &str, output_path: &str) -> Result
 
     fs::write(output_path, csv_content)?;
 
-    println!("[✔] Vault '{vault_name}' exported to CSV: {output_path}");
-    println!("[!] WARNING: This is Plaintext, delete after use.");
-    println!("[✔] {} entries exported", vault.e.len());
+    // Silent - TUI/CLI handlers show success messages
 
     Ok(())
 }
@@ -289,9 +270,7 @@ pub fn export_json(vault_name: &str, password: &str, output_path: &str) -> Resul
     let json_string = serde_json::to_string_pretty(&json_output)?;
     fs::write(output_path, json_string)?;
 
-    println!("[✔] Vault '{vault_name}' exported to JSON: {output_path}");
-    println!("[!] WARNING: This is Plaintext, delete after use.");
-    println!("[✔] {} entries exported", vault.e.len());
+    // Silent - TUI/CLI handlers show success messages
 
     Ok(())
 }
@@ -314,9 +293,6 @@ pub fn import_csv(vault_name: &str, password: &str, input_path: &str) -> Result<
         return Err("Empty CSV file".into());
     }
 
-    let mut imported_count = 0;
-    let mut skipped_count = 0;
-
     for line_result in lines {
         let line = line_result?;
         if line.trim().is_empty() {
@@ -326,7 +302,6 @@ pub fn import_csv(vault_name: &str, password: &str, input_path: &str) -> Result<
         let fields = parse_csv_line(&line);
 
         if fields.len() < 3 {
-            skipped_count += 1;
             continue;
         }
 
@@ -356,16 +331,11 @@ pub fn import_csv(vault_name: &str, password: &str, input_path: &str) -> Result<
         };
 
         vault.e.push(entry);
-        imported_count += 1;
     }
 
     storage::svv(&vault, password)?;
 
-    println!("[✔] Import completed to vault '{vault_name}'");
-    println!("[✔] Imported: {imported_count} entries");
-    if skipped_count > 0 {
-        println!("[!] Skipped: {skipped_count} invalid entries");
-    }
+    // Silent - TUI/CLI handlers show success messages
 
     let config = crate::config::load_config()?;
     if config.auto_backup {
@@ -385,8 +355,6 @@ pub fn import_json(vault_name: &str, password: &str, input_path: &str) -> Result
     let Some(serde_json::Value::Array(entries)) = json.get("entries") else {
         return Err("Invalid JSON format".into());
     };
-
-    let mut imported_count = 0;
 
     for entry_json in entries {
         let entry = Entry {
@@ -423,13 +391,9 @@ pub fn import_json(vault_name: &str, password: &str, input_path: &str) -> Result
         };
 
         vault.e.push(entry);
-        imported_count += 1;
     }
 
     storage::svv(&vault, password)?;
-
-    println!("[✔] Import completed to vault '{vault_name}'");
-    println!("[✔] Imported: {imported_count} entries");
 
     let config = crate::config::load_config()?;
     if config.auto_backup {
@@ -627,7 +591,6 @@ pub fn preview_json_import(
     password: &str,
     input_path: &str,
 ) -> Result<ImportPreview> {
-    // Load current vault to check for duplicates
     let vault = storage::ld_vt(password)?;
 
     let json_content = fs::read_to_string(input_path)?;
@@ -903,13 +866,6 @@ pub fn export_csv_filtered(
     }
 
     fs::write(output_path, csv_content)?;
-
-    println!(
-        "[✔] Exported {} entries to CSV: {}",
-        filtered_entries.len(),
-        output_path
-    );
-    println!("[!] WARNING: This is Plaintext, delete after use.");
 
     Ok(())
 }

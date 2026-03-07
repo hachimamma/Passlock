@@ -930,25 +930,45 @@ pub fn handle_export_csv(app: &mut App, key: KeyCode) {
             app.msg.clear();
             app.screen = Screen::ImportExportMenu;
         }
+        KeyCode::Tab => {
+            app.msg.clear();
+        }
         KeyCode::Up => {
-            if app.export_filter_type > 0 {
-                app.export_filter_type -= 1;
+            if app.export_file_path.is_empty() && app.export_filter_value.is_empty() {
+                if app.export_filter_type > 0 {
+                    app.export_filter_type -= 1;
+                }
             }
         }
         KeyCode::Down => {
-            if app.export_filter_type < 2 {
-                app.export_filter_type += 1;
+            if app.export_file_path.is_empty() && app.export_filter_value.is_empty() {
+                if app.export_filter_type < 2 {
+                    app.export_filter_type += 1;
+                }
             }
         }
-        KeyCode::Char(c) if c != '\t' => {
-            app.export_file_path.push(c);
+        KeyCode::Char(c) => {
+            if app.export_filter_type > 0 && app.export_filter_value.is_empty() && app.export_file_path.is_empty() {
+                app.export_filter_value.push(c);
+            } else {
+                app.export_file_path.push(c);
+            }
         }
         KeyCode::Backspace => {
-            app.export_file_path.pop();
+            if !app.export_file_path.is_empty() {
+                app.export_file_path.pop();
+            } else if !app.export_filter_value.is_empty() {
+                app.export_filter_value.pop();
+            }
         }
         KeyCode::Enter => {
             if app.export_file_path.is_empty() {
                 app.set_msg("Please enter output file path", MessageType::Error);
+                return;
+            }
+            
+            if app.export_filter_type > 0 && app.export_filter_value.is_empty() {
+                app.set_msg("Please enter filter value", MessageType::Error);
                 return;
             }
 
@@ -962,17 +982,32 @@ pub fn handle_export_csv(app: &mut App, key: KeyCode) {
 
             let result = if app.export_filter_type == 0 {
                 backup::export_csv(&cfg.active_vault, &app.master_pwd, &app.export_file_path)
+            } else if app.export_filter_type == 1 {
+                backup::export_csv_filtered(
+                    &cfg.active_vault,
+                    &app.master_pwd,
+                    &app.export_file_path,
+                    Some(&app.export_filter_value),
+                    None,
+                )
             } else {
-                app.set_msg(
-                    "Filtered export: Enter filter value first",
-                    MessageType::Info,
-                );
-                return;
+                backup::export_csv_filtered(
+                    &cfg.active_vault,
+                    &app.master_pwd,
+                    &app.export_file_path,
+                    None,
+                    Some(&app.export_filter_value),
+                )
             };
 
             match result {
                 Ok(()) => {
-                    app.set_msg("Export successful!", MessageType::Success);
+                    let msg = if app.export_filter_type == 0 {
+                        "Export successful!".to_string()
+                    } else {
+                        format!("Exported filtered entries ({})", app.export_filter_value)
+                    };
+                    app.set_msg(&msg, MessageType::Success);
                     app.export_file_path.clear();
                     app.export_filter_value.clear();
                     app.screen = Screen::MainMenu;

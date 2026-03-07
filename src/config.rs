@@ -5,11 +5,16 @@ use std::path::PathBuf;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
     pub active_vault: String,
+    #[serde(default = "default_theme")]
     pub theme: String,
     pub auto_backup: bool,
     pub max_backups: usize,
     pub clipboard_timeout: u64,
     pub refresh_rate: u64,
+}
+
+fn default_theme() -> String {
+    String::from("GruvboxDark")
 }
 
 impl Default for Config {
@@ -74,8 +79,15 @@ pub fn load_config() -> Result<Config, Box<dyn std::error::Error>> {
     let config_path = get_config_path();
 
     if config_path.exists() {
-        let config_str = fs::read_to_string(config_path)?;
+        let config_str = fs::read_to_string(&config_path)?;
         let config: Config = serde_json::from_str(&config_str)?;
+        
+        let needs_update = !config_str.contains("\"theme\"");
+        
+        if needs_update {
+            save_config(&config)?;
+        }
+        
         Ok(config)
     } else {
         let config = Config::default();
